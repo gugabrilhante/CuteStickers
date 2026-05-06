@@ -2,9 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.kotlin.kapt)
+    id("kotlin-kapt")
     alias(libs.plugins.dagger.hilt.android)
-//    alias(libs.plugins.dagger.hilt.plugin)
 }
 
 android {
@@ -40,36 +39,19 @@ android {
 }
 
 dependencies {
+    implementation(project(":feature:cats"))
+    implementation(project(":feature:dogs"))
+    implementation(project(":core:designsystem"))
+    implementation(project(":core:common"))
+    implementation(project(":core:data"))
 
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.google.material)
-    implementation(libs.androidx.constraintlayout)
-
-    implementation(libs.google.gson)
-    implementation(libs.retrofit)
-    implementation(libs.retrofit.converter.gson)
-    implementation(libs.coil.compose)
-
+    val bom = libs.androidx.compose.bom
+    implementation(platform(bom))
+    implementation(libs.androidx.material3)
+    implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.dagger.hilt.android)
     kapt(libs.dagger.hilt.compiler)
-    kapt(libs.androidx.hilt.compiler)
-    implementation(libs.androidx.hilt.navigation.compose)
-
-    implementation(libs.androidx.lifecycle.viewmodel.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
-
-    implementation(platform(libs.androidx.compose.bom.extra))
-    implementation(libs.androidx.material3)
-    implementation(libs.androidx.activity.compose.alt)
-    implementation(libs.androidx.ui.tooling.preview.android)
-
-    testImplementation(libs.junit)
-    testImplementation(libs.mockk)
-    testImplementation(libs.kotlinx.coroutines.test)
-
-    androidTestImplementation(libs.androidx.junit.alt)
-    androidTestImplementation(libs.androidx.espresso.core.alt)
-    androidTestImplementation(platform(libs.androidx.compose.bom.extra))
 }
