@@ -15,7 +15,7 @@ internal class WhatsAppStickerExporter @Inject constructor(
 ) : StickerExporter {
 
     companion object {
-        private const val TAG = "WhatsAppExporter"
+        private const val TAG = "Sticker - WhatsAppExporter"
         private const val WHATSAPP_PACKAGE = "com.whatsapp"
         private const val WHATSAPP_BUSINESS_PACKAGE = "com.whatsapp.w4b"
         private const val ACTION_ENABLE_STICKER_PACK = "com.whatsapp.intent.action.ENABLE_STICKER_PACK"
@@ -58,7 +58,13 @@ internal class WhatsAppStickerExporter @Inject constructor(
             putExtra("sticker_pack_name", pack.name)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
 
-            Log.d(TAG, "Intent built successfully with extras: id=${pack.id}, authority=$authority")
+            Log.d(TAG, "Intent built successfully:")
+            Log.d(TAG, "  Action: $action")
+            Log.d(TAG, "  Package: $targetPackage")
+            Log.d(TAG, "  Extra 'sticker_pack_id': ${pack.id}")
+            Log.d(TAG, "  Extra 'sticker_pack_authority': $authority")
+            Log.d(TAG, "  Extra 'sticker_pack_name': ${pack.name}")
+            Log.d(TAG, "  Flags: $flags")
         }
     }
 

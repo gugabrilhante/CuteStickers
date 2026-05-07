@@ -39,11 +39,6 @@
             </intent-filter>
         </activity>
 
-        <provider
-            android:name="com.gustavo.brilhante.cutecats.feature.stickers.provider.StickerContentProvider"
-            android:authorities="${applicationId}.StickerContentProvider"
-            android:exported="true"
-            android:grantUriPermissions="true" />
     </application>
 
 </manifest>

@@ -22,6 +22,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            enableUnitTestCoverage = true
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -44,6 +47,7 @@ dependencies {
     implementation(project(":feature:cats"))
     implementation(project(":feature:dogs"))
     implementation(project(":feature:media-details"))
+    implementation(project(":feature:stickers"))
     implementation(project(":core:designsystem"))
     implementation(project(":core:common"))
     implementation(project(":core:data"))

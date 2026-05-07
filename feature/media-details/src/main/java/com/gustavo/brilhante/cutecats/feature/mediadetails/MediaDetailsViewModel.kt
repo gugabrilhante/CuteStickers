@@ -76,12 +76,15 @@ class MediaDetailsViewModel @Inject constructor(
     }
 
     fun onConfirmExport(pack: StickerPack) {
+        android.util.Log.d("Sticker - MediaDetailsVM", "onConfirmExport — packId=${pack.id}")
         viewModelScope.launch {
             exportStickerPackUseCase.buildIntent(pack)
                 .onSuccess { intent ->
+                    android.util.Log.d("Sticker - MediaDetailsVM", "  Intent built successfully, sending event")
                     _events.send(MediaDetailsEvent.LaunchIntent(intent))
                 }
                 .onFailure { e ->
+                    android.util.Log.e("Sticker - MediaDetailsVM", "  Failed to build intent", e)
                     _uiState.update {
                         it.copy(stickerState = StickerState.Error(e.message ?: "WhatsApp not available"))
                     }

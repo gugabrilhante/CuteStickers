@@ -20,7 +20,7 @@ import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private const val TAG = "StickerRepository"
+private const val TAG = "Sticker - Repository"
 
 @Singleton
 internal class StickerRepositoryImpl @Inject constructor(
