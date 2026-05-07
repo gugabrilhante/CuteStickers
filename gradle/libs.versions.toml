@@ -1,6 +1,7 @@
 [versions]
 agp = "8.9.2"
-kotlin = "2.0.21"
+kotlin = "2.1.20"
+ksp = "2.1.20-2.0.1"
 kotlinxSerializationJson = "1.7.3"
 retrofitKotlinxSerializationJson = "1.0.0"
 coreKtx = "1.16.0"
@@ -11,16 +12,18 @@ constraintLayout = "2.1.0" # evitando o uso de '+'
 gson = "2.10.1"
 retrofit = "2.9.0"
 okhttpLoggingInterceptor = "4.12.0"
-hilt = "2.48"
-hiltCompiler = "1.0.0"
-hiltNavigationCompose = "1.1.0"
-lifecycleRuntimeKtx = "2.8.7"
-lifecycleViewModelKtx = "2.8.7"
-lifecycleViewModelCompose = "2.8.7"
-activityCompose = "1.10.1"
+hilt = "2.54"
+hiltCompiler = "1.2.0"
+hiltNavigationCompose = "1.2.0"
+navigation = "2.8.5"
+navigation3 = "1.1.1"
+lifecycleViewmodelNav3 = "2.10.0"
+lifecycleRuntimeKtx = "2.10.0"
+lifecycleViewModelKtx = "2.10.0"
+lifecycleViewModelCompose = "2.10.0"
+activityCompose = "1.13.0"
 activityComposeAlt = "1.9.3"
-composeBom = "2024.09.00"
-composeBomExtra = "2024.12.01"
+composeBom = "2026.05.00"
 uiToolingPreviewAndroid = "1.7.6"
 mockk = "1.13.7"
 coroutinesTest = "1.7.3"
@@ -48,6 +51,10 @@ dagger-hilt-android = { group = "com.google.dagger", name = "hilt-android", vers
 dagger-hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 androidx-hilt-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "hiltCompiler" }
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
+androidx-navigation3-runtime = { group = "androidx.navigation3", name = "navigation3-runtime", version.ref = "navigation3" }
+androidx-navigation3-ui = { group = "androidx.navigation3", name = "navigation3-ui", version.ref = "navigation3" }
+androidx-lifecycle-viewmodel-navigation3 = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-navigation3", version.ref = "lifecycleViewmodelNav3" }
 
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycleViewModelKtx" }
@@ -57,7 +64,6 @@ androidx-activity-compose = { group = "androidx.activity", name = "activity-comp
 androidx-activity-compose-alt = { group = "androidx.activity", name = "activity-compose", version.ref = "activityComposeAlt" }
 
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
-androidx-compose-bom-extra = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBomExtra" }
 
 androidx-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
@@ -67,6 +73,8 @@ androidx-ui-tooling-preview-android = { group = "androidx.compose.ui", name = "u
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core" }
+androidx-animation = { group = "androidx.compose.animation", name = "animation" }
 
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
@@ -84,5 +92,6 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
 dagger-hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 dagger-hilt-plugin = { id = "dagger.hilt.android.plugin", version.ref = "hilt" }
+google-devtools-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

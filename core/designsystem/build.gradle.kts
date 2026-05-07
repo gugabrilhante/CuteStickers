@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.gustavo.brilhante.cutecats.core.designsystem"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 24

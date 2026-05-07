@@ -1,58 +1,45 @@
-🐾 CuteCats
-Check out the source code here 👉 github.com/gugabrilhante/CuteCats
+# CuteStickers
 
-https://github.com/gugabrilhante/CuteCats/issues/1#issue-3046923786
+CuteStickers is a scalable Android application built with Jetpack Compose, Hilt, and KSP, following modern architectural principles. Originally focused on cute animal GIFs, the project has been refactored to be domain-agnostic, supporting a wide range of media content categories like cats, dogs, stickers, anime, and more.
 
-This Android app fetches and displays 10 random images of cats or dogs using the public TheCatApi and TheDogApi. You can switch between them using a simple tab-style interface.
+## Architecture
 
-🚀 How to Run the Project
-Clone the repository:
+The project follows a modular architecture designed for scalability and reusability:
 
-bash
-Copiar
-Editar
-git clone https://github.com/gugabrilhante/CuteCats.git
-Open in Android Studio (Hedgehog or newer recommended).
+### Modules
 
-Wait for Gradle sync to complete.
+- **`:app`**: The main entry point of the application, responsible for navigation and dependency aggregation.
+- **`:core:model`**: Domain-agnostic data models used across all layers (e.g., `MediaItem`).
+- **`:core:domain`**: Core business logic and repository interfaces (e.g., `MediaRepository`).
+- **`:core:data`**: Implementation of domain interfaces, handling data retrieval from network or local sources.
+- **`:core:network`**: Network communication layer using Retrofit and domain-agnostic service definitions.
+- **`:core:ui`**: Reusable UI components and base screen implementations (e.g., `DiscoverScreen`, `MediaCard`).
+- **`:core:designsystem`**: Application theme, colors, and design tokens.
+- **`:feature:discover`** (Planned): A unified discovery feature for browsing different media categories.
+- **`:feature:media-details`**: A reusable feature for displaying detailed information about a specific media item.
+- **`:feature:cats` / `:feature:dogs`**: Specific category implementations leveraging the core discovery and details pipelines.
 
-Connect a device or launch an emulator.
+## Scalability and Extensibility
 
-Click Run ▶️ to build and start the app.
+The refactored architecture offers several benefits for future growth:
 
-🛠️ Tech Stack
-Kotlin
+- **Domain-Agnostic Core**: The core layers (`model`, `domain`, `data`, `network`, `ui`) deal with generic "Media" concepts rather than specific domains like "Animals".
+- **Pluggable Features**: New content categories (e.g., `cars`, `wallpapers`) can be added by creating new feature modules or extending the `discover` feature without modifying existing core logic.
+- **Reusable UI**: The `DiscoverScreen` and `MediaCard` components in `:core:ui` are designed to be reused across different features, ensuring UI/UX consistency.
+- **Dependency Inversion**: High-level features depend on generic interfaces (e.g., `MediaRepository`), allowing different data sources or category implementations to be swapped in easily.
 
-Jetpack Compose – Modern declarative UI
+## Getting Started
 
-Hilt – Dependency Injection
+1. Clone the repository.
+2. Open the project in Android Studio.
+3. Sync Gradle and run the `:app` module.
 
-Retrofit – Networking
+## Technologies Used
 
-Coil – Image loading
-
-MVVM + Clean Architecture
-
-SOLID principles – especially Dependency Inversion Principle (DIP)
-
-🧱 Architecture Overview
-The project follows a layered Clean Architecture:
-
-Copiar
-Editar
-presentation/
-├── ItemScreen.kt
-├── ItemViewModel.kt
-├── state/ (UI States)
-domain/
-├── model/
-├── repository/
-data/
-├── remote/
-├── di/ (Hilt Modules)
-ViewModel interacts with UseCase, which interacts with a Repository interface.
-
-You can switch between TheCatApi and TheDogApi by injecting different implementations of the same repository interface.
-
-📄 License
-This project is licensed under the MIT License. Feel free to use, modify, and distribute.
+- **Jetpack Compose**: For a modern, declarative UI.
+- **Hilt**: For dependency injection.
+- **KSP (Kotlin Symbol Processing)**: For efficient annotation processing.
+- **Retrofit**: For network requests.
+- **Kotlin Serialization**: For domain-agnostic data parsing.
+- **Navigation 3**: For type-safe and scalable navigation.
+- **Shared Element Transitions**: For smooth UI animations between screens.

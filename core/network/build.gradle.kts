@@ -1,14 +1,14 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
-    id("kotlin-kapt")
+    alias(libs.plugins.google.devtools.ksp)
     alias(libs.plugins.dagger.hilt.android)
     alias(libs.plugins.kotlin.serialization)
 }
 
 android {
     namespace = "com.gustavo.brilhante.cutecats.core.network"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 24
@@ -27,10 +27,10 @@ dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:common"))
     
-    implementation(libs.retrofit)
-    implementation(libs.retrofit.kotlinx.serialization)
-    implementation(libs.okhttp.logging)
-    implementation(libs.kotlinx.serialization.json)
+    api(libs.retrofit)
+    api(libs.retrofit.kotlinx.serialization)
+    api(libs.okhttp.logging)
+    api(libs.kotlinx.serialization.json)
     implementation(libs.dagger.hilt.android)
-    kapt(libs.dagger.hilt.compiler)
+    ksp(libs.dagger.hilt.compiler)
 }

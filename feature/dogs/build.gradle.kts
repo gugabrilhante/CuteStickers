@@ -2,13 +2,13 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("kotlin-kapt")
+    alias(libs.plugins.google.devtools.ksp)
     alias(libs.plugins.dagger.hilt.android)
 }
 
 android {
     namespace = "com.gustavo.brilhante.cutecats.feature.dogs"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 24
@@ -37,9 +37,10 @@ dependencies {
     val bom = libs.androidx.compose.bom
     implementation(platform(bom))
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.animation)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.dagger.hilt.android)
-    kapt(libs.dagger.hilt.compiler)
+    ksp(libs.dagger.hilt.compiler)
 }

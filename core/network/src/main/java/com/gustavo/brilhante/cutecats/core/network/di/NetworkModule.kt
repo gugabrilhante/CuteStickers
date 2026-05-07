@@ -2,7 +2,7 @@ package com.gustavo.brilhante.cutecats.core.network.di
 
 import com.gustavo.brilhante.cutecats.core.common.network.CatsApi
 import com.gustavo.brilhante.cutecats.core.common.network.DogsApi
-import com.gustavo.brilhante.cutecats.core.network.AnimalService
+import com.gustavo.brilhante.cutecats.core.network.MediaService
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import dagger.Module
 import dagger.Provides
@@ -38,7 +38,7 @@ object NetworkModule {
     @Provides
     @Singleton
     @CatsApi
-    fun provideCatsService(okHttpClient: OkHttpClient, networkJson: Json): AnimalService {
+    fun provideCatsService(okHttpClient: OkHttpClient, networkJson: Json): MediaService {
         return Retrofit.Builder()
             .baseUrl("https://api.thecatapi.com/v1/")
             .client(
@@ -53,13 +53,13 @@ object NetworkModule {
             )
             .addConverterFactory(networkJson.asConverterFactory("application/json".toMediaType()))
             .build()
-            .create(AnimalService::class.java)
+            .create(MediaService::class.java)
     }
 
     @Provides
     @Singleton
     @DogsApi
-    fun provideDogsService(okHttpClient: OkHttpClient, networkJson: Json): AnimalService {
+    fun provideDogsService(okHttpClient: OkHttpClient, networkJson: Json): MediaService {
         return Retrofit.Builder()
             .baseUrl("https://api.thedogapi.com/v1/")
             .client(
@@ -74,6 +74,6 @@ object NetworkModule {
             )
             .addConverterFactory(networkJson.asConverterFactory("application/json".toMediaType()))
             .build()
-            .create(AnimalService::class.java)
+            .create(MediaService::class.java)
     }
 }

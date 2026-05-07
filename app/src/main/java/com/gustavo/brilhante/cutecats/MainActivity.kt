@@ -4,8 +4,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.gustavo.brilhante.cutecats.core.designsystem.theme.CuteCatsTheme
-import com.gustavo.brilhante.cutecats.ui.CuteCatsApp
+import com.gustavo.brilhante.cutecats.core.designsystem.theme.CuteStickersTheme
+import com.gustavo.brilhante.cutecats.ui.CuteStickersApp
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -14,8 +14,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            CuteCatsTheme {
-                CuteCatsApp()
+            CuteStickersTheme {
+                CuteStickersApp()
             }
         }
     }

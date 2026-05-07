@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.gustavo.brilhante.cutecats.core.ui"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 24
@@ -32,6 +32,7 @@ dependencies {
     val bom = libs.androidx.compose.bom
     implementation(platform(bom))
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.animation)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.coil.compose)
 }
