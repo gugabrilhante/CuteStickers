@@ -12,7 +12,7 @@ class ItemsFacade @Inject constructor(
         Item(
             id = item.id,
             url = item.url,
-            with = item.with,
+            with = item.width,
             height = item.height,
         )
     }
@@ -20,7 +20,7 @@ class ItemsFacade @Inject constructor(
         Item(
             id = item.id,
             url = item.url,
-            with = item.with,
+            with = item.width,
             height = item.height,
         )
     }
