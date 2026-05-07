@@ -23,6 +23,7 @@
             <option value="$PROJECT_DIR$/feature/cats" />
             <option value="$PROJECT_DIR$/feature/dogs" />
             <option value="$PROJECT_DIR$/feature/media-details" />
+            <option value="$PROJECT_DIR$/feature/stickers" />
           </set>
         </option>
       </GradleProjectSettings>

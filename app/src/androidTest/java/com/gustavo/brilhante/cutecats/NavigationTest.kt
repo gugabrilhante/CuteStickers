@@ -26,8 +26,8 @@ class NavigationTest {
 
         composeTestRule.onAllNodesWithTag("image-", substring = true).onFirst().performClick()
 
-        // Check if Pet Details screen is shown
-        composeTestRule.onNodeWithText("Pet Details").assertIsDisplayed()
+        // Check if Media Details screen is shown
+        composeTestRule.onNodeWithText("Media Details").assertIsDisplayed()
         
         // Check if hero image is displayed
         composeTestRule.onNodeWithTag("hero_image").assertIsDisplayed()
