@@ -96,6 +96,16 @@ class MediaDetailsViewModel @Inject constructor(
         _uiState.update { it.copy(stickerState = StickerState.Idle) }
     }
 
+    fun onExportResult(resultCode: Int, data: Intent?) {
+        val extras = data?.extras?.let { bundle ->
+            bundle.keySet().joinToString(", ") { "$it=${bundle.get(it)}" }
+        }
+        android.util.Log.d("Sticker - MediaDetailsVM", "WhatsApp Export Result:")
+        android.util.Log.d("Sticker - MediaDetailsVM", "  ResultCode: $resultCode")
+        android.util.Log.d("Sticker - MediaDetailsVM", "  Data: $data")
+        android.util.Log.d("Sticker - MediaDetailsVM", "  Extras: $extras")
+    }
+
     fun onDownloadMedia() {
         val imageUrl = _uiState.value.imageUrl
         if (_uiState.value.downloadState is DownloadState.Loading) return

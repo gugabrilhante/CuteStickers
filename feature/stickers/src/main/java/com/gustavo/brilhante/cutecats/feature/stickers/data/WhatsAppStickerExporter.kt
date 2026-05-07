@@ -1,7 +1,9 @@
 package com.gustavo.brilhante.cutecats.feature.stickers.data
 
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import com.gustavo.brilhante.cutecats.feature.stickers.domain.StickerExporter
 import com.gustavo.brilhante.cutecats.feature.stickers.domain.StickerPack
@@ -51,21 +53,35 @@ internal class WhatsAppStickerExporter @Inject constructor(
         val authority = "${context.packageName}.StickerContentProvider"
         Log.d(TAG, "building intent — targetPackage=$targetPackage, authority=$authority, packId=${pack.id}, packName=${pack.name}")
 
-        Intent(ACTION_ENABLE_STICKER_PACK).apply {
+        val metadataUri = Uri.parse("content://$authority/metadata/${pack.id}")
+        Log.d(TAG, "Metadata URI: $metadataUri")
+
+        val intent = Intent(ACTION_ENABLE_STICKER_PACK).apply {
             setPackage(targetPackage)
             putExtra("sticker_pack_id", pack.id)
             putExtra("sticker_pack_authority", authority)
             putExtra("sticker_pack_name", pack.name)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            putExtra("sticker_pack_publisher", pack.publisher)
+            putExtra("sticker_pack_tray_image_file_name", pack.trayImageFileName)
 
-            Log.d(TAG, "Intent built successfully:")
-            Log.d(TAG, "  Action: $action")
-            Log.d(TAG, "  Package: $targetPackage")
-            Log.d(TAG, "  Extra 'sticker_pack_id': ${pack.id}")
-            Log.d(TAG, "  Extra 'sticker_pack_authority': $authority")
-            Log.d(TAG, "  Extra 'sticker_pack_name': ${pack.name}")
-            Log.d(TAG, "  Flags: $flags")
+            clipData = ClipData.newRawUri("", metadataUri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
+
+        Log.d(TAG, "Granting URI permission to $targetPackage")
+        context.grantUriPermission(
+            targetPackage,
+            metadataUri,
+            Intent.FLAG_GRANT_READ_URI_PERMISSION
+        )
+
+        Log.d(TAG, "Intent built successfully:")
+        Log.d(TAG, "  Action: ${intent.action}")
+        Log.d(TAG, "  Package: $targetPackage")
+        Log.d(TAG, "  Intent ClipData: ${intent.clipData}")
+        Log.d(TAG, "  Flags: ${intent.flags}")
+
+        intent
     }
 
     private fun validatePackFiles(pack: StickerPack) {

@@ -6,12 +6,7 @@
         android:maxSdkVersion="28" />
 
     <application>
-        <provider
-            android:name=".provider.StickerContentProvider"
-            android:authorities="${applicationId}.StickerContentProvider"
-            android:enabled="true"
-            android:exported="true"
-            android:grantUriPermissions="true" />
+        <!-- Provider moved to app module to ensure registration -->
     </application>
 
 </manifest>

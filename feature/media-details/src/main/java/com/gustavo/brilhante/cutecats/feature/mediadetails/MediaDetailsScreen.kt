@@ -3,7 +3,6 @@ package com.gustavo.brilhante.cutecats.feature.mediadetails
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -84,8 +83,7 @@ fun MediaDetailsRoute(
     val stickerImportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        val error = result.data?.getStringExtra("error")
-        Log.d("Sticker - ", "Activity result: $result, whatsapp_error: $error")
+        viewModel.onExportResult(result.resultCode, result.data)
     }
 
     LaunchedEffect(Unit) {

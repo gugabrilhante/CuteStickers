@@ -35,6 +35,9 @@ class StickerContentProvider : ContentProvider() {
     }
 
     companion object {
+        init {
+            Log.e("Sticker - Provider", "CRITICAL: StickerContentProvider CLASS LOADED (static init)")
+        }
         private const val TAG = "Sticker - Provider"
 
         private const val METADATA_ALL = 1
