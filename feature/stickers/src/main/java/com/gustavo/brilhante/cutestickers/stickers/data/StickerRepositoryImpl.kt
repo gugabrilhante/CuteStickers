@@ -37,7 +37,7 @@ internal class StickerRepositoryImpl @Inject constructor(
             // Use a unique packId per export to ensure WhatsApp treats it as a new pack
             val packId = "cat_${mediaId}_${System.currentTimeMillis()}"
             val shortId = if (mediaId.length > 4) mediaId.takeLast(4) else mediaId
-            val packName = "CuteCat $shortId"
+            val packName = "CuteSticker $shortId"
 
             val primaryFile = fileManager.stickerFile(packId, mediaId)
             imageProcessor.downloadAndProcess(imageUrl, primaryFile, ImageProcessor.STICKER_SIZE)
@@ -60,7 +60,7 @@ internal class StickerRepositoryImpl @Inject constructor(
             val packInfo = StickerPackInfo(
                 id = packId,
                 name = packName,
-                publisher = "CuteCats",
+                publisher = "CuteStickers",
                 trayImageFileName = trayFile.name,
                 stickers = stickers
             )

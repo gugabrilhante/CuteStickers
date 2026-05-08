@@ -13,7 +13,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "CuteCats"
+rootProject.name = "CuteStickers"
 include(":app")
 include(":core:data")
 include(":core:model")

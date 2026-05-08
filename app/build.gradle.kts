@@ -12,13 +12,13 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.gustavo.brilhante.cutecats"
+        applicationId = "com.gustavo.brilhante.cutestickers"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "com.gustavo.brilhante.cutecats.HiltTestRunner"
+        testInstrumentationRunner = "com.gustavo.brilhante.cutestickers.HiltTestRunner"
     }
 
     buildTypes {
