@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
@@ -12,10 +14,19 @@ android {
 
     defaultConfig {
         minSdk = 24
+
+        val localProperties = Properties()
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localProperties.load(localPropertiesFile.inputStream())
+        }
+        val catsApiKey = localProperties.getProperty("CATS_API_KEY") ?: ""
+        buildConfigField("String", "CATS_API_KEY", "\"$catsApiKey\"")
     }
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     buildTypes {
@@ -34,6 +45,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:network"))
     implementation(project(":core:domain"))
     implementation(project(":core:ui"))
     implementation(project(":core:common"))

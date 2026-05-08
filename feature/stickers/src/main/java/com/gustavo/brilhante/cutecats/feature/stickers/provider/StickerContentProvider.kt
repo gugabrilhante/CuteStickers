@@ -7,7 +7,6 @@ import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
 import android.os.ParcelFileDescriptor
-import android.util.Log
 import com.gustavo.brilhante.cutecats.feature.stickers.data.StickerInfo
 import com.gustavo.brilhante.cutecats.feature.stickers.data.StickerPackInfo
 import com.gustavo.brilhante.cutecats.feature.stickers.data.StickerStore
@@ -20,26 +19,10 @@ import java.io.FileNotFoundException
  *   content://<authority>/metadata                           → all packs list
  *   content://<authority>/metadata/<packId>                 → sticker list for one pack
  *   content://<authority>/stickers_asset/<packId>/<file>    → sticker or tray WebP file
- *
- * NOTE: The path segment for files is "stickers_asset", NOT "stickers". Using the wrong
- * path causes UriMatcher to return NO_MATCH → openFile() throws → WhatsApp silently
- * aborts validation before ever showing the import popup.
- *
- * The provider MUST run in our app's process (no multiprocess="true") so that openFile()
- * can read from our private filesDir and hand WhatsApp a cross-process ParcelFileDescriptor.
  */
 class StickerContentProvider : ContentProvider() {
 
-    init {
-        Log.e("Sticker - Provider", "CRITICAL: StickerContentProvider <init> called!")
-    }
-
     companion object {
-        init {
-            Log.e("Sticker - Provider", "CRITICAL: StickerContentProvider CLASS LOADED (static init)")
-        }
-        private const val TAG = "Sticker - Provider"
-
         private const val METADATA_ALL = 1
         private const val METADATA_PACK = 2
         private const val STICKERS = 3
@@ -62,7 +45,6 @@ class StickerContentProvider : ContentProvider() {
             "animated_sticker_pack"
         )
 
-        // sticker_file_size is NOT required by the official sample, although some guides mention it.
         private val STICKER_COLUMNS = arrayOf(
             "sticker_file_name",
             "sticker_emoji"
@@ -76,15 +58,11 @@ class StickerContentProvider : ContentProvider() {
             addURI(authority, "metadata",             METADATA_ALL)
             addURI(authority, "metadata/*",           METADATA_PACK)
             addURI(authority, "stickers/*",           STICKERS)
-            addURI(authority, "stickers_asset/*/*",   STICKERS_ASSET)  // ← "stickers_asset", not "stickers"
+            addURI(authority, "stickers_asset/*/*",   STICKERS_ASSET)
         }
     }
 
-    override fun onCreate(): Boolean {
-        Log.e(TAG, "CRITICAL: StickerContentProvider.onCreate executed!")
-        Log.e(TAG, "  Authority being used: $authority")
-        return true
-    }
+    override fun onCreate(): Boolean = true
 
     override fun query(
         uri: Uri,
@@ -93,95 +71,58 @@ class StickerContentProvider : ContentProvider() {
         selectionArgs: Array<String>?,
         sortOrder: String?
     ): Cursor? {
-        Log.d(TAG, "StickerContentProvider.query — URI: $uri")
-        Log.d(TAG, "  Projection: ${projection?.joinToString()}")
         val match = uriMatcher.match(uri)
-        Log.d(TAG, "  Match code: $match")
         val store = StickerStore(context!!)
         return when (match) {
             METADATA_ALL -> {
                 val packs = store.loadAllPacks()
-                Log.d(TAG, "  METADATA_ALL → Found ${packs.size} pack(s)")
                 buildPacksCursor(packs)
             }
             METADATA_PACK -> {
                 val packId = uri.lastPathSegment
-                Log.d(TAG, "  METADATA_PACK → packId: $packId")
                 val packs = store.loadAllPacks()
                 val pack = packs.find { it.id == packId }
-                if (pack == null) {
-                    Log.e(TAG, "  METADATA_PACK → Pack $packId NOT FOUND in store")
-                } else {
-                    Log.d(TAG, "  METADATA_PACK → Pack $packId found")
-                }
                 buildPacksCursor(if (pack != null) listOf(pack) else emptyList())
             }
             STICKERS -> {
-                val packId = uri.lastPathSegment
-                if (packId == null) {
-                    Log.e(TAG, "  STICKERS → Missing packId in URI: $uri")
-                    return null
-                }
+                val packId = uri.lastPathSegment ?: return null
                 val stickers = store.loadStickers(packId)
-                Log.d(TAG, "  STICKERS → Found ${stickers.size} sticker(s) for pack $packId")
                 buildStickersCursor(packId, stickers, store)
             }
-            else -> {
-                Log.w(TAG, "  UNMATCHED URI: $uri (match code: $match)")
-                null
-            }
+            else -> null
         }
     }
 
     override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor {
-        Log.d(TAG, "StickerContentProvider.openFile — URI: $uri, mode: $mode")
         val match = uriMatcher.match(uri)
-        if (match != STICKERS_ASSET) {
-            Log.e(TAG, "  openFile — URI not matched (Expected STICKERS_ASSET): $uri (Match code: $match)")
-            throw FileNotFoundException("Unrecognised URI: $uri")
-        }
-        // URI segments: [0]=stickers_asset, [1]=packId, [2]=fileName
+        if (match != STICKERS_ASSET) throw FileNotFoundException("Unrecognised URI: $uri")
+        
         val segments = uri.pathSegments
-        if (segments.size != 3) {
-            Log.e(TAG, "  openFile — Expected 3 segments, got ${segments.size} in $uri")
-            throw FileNotFoundException("Expected 3 path segments, got ${segments.size}: $uri")
-        }
+        if (segments.size != 3) throw FileNotFoundException("Expected 3 path segments: $uri")
+        
         val packId = segments[1]
         val fileName = segments[2]
 
         val file = StickerStore(context!!).getStickerFile(packId, fileName)
-        Log.d(TAG, "  Serving file: $packId/$fileName")
-        Log.d(TAG, "  Path: ${file.absolutePath}")
-        Log.d(TAG, "  Exists: ${file.exists()}, Size: ${file.length()}B")
+        if (!file.exists()) throw FileNotFoundException("Sticker not found: $packId/$fileName")
         
-        if (!file.exists()) {
-            Log.e(TAG, "  File NOT FOUND: ${file.absolutePath}")
-            throw FileNotFoundException("Sticker not found: $packId/$fileName")
-        }
         return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
     }
 
     override fun getType(uri: Uri): String {
-        Log.d(TAG, "StickerContentProvider.getType — URI: $uri")
         val match = uriMatcher.match(uri)
-        val result = when (match) {
+        return when (match) {
             METADATA_ALL -> "vnd.android.cursor.dir/vnd.$authority.metadata"
             METADATA_PACK -> "vnd.android.cursor.item/vnd.$authority.metadata"
             STICKERS -> "vnd.android.cursor.dir/vnd.$authority.stickers"
             STICKERS_ASSET -> "image/webp"
-            else -> {
-                Log.w(TAG, "  getType — UNKNOWN URI: $uri (Match code: $match)")
-                throw IllegalArgumentException("Unknown URI: $uri (match=$match)")
-            }
+            else -> throw IllegalArgumentException("Unknown URI: $uri")
         }
-        Log.d(TAG, "  getType result → $result")
-        return result
     }
 
     private fun buildPacksCursor(packs: List<StickerPackInfo>): Cursor {
         val cursor = MatrixCursor(PACK_COLUMNS)
         packs.forEach { pack ->
-            Log.d(TAG, "  Adding pack to cursor: id=${pack.id}, name=${pack.name}, tray=${pack.trayImageFileName}")
             val row = arrayOf<Any?>(
                 pack.id,
                 pack.name,
@@ -194,12 +135,11 @@ class StickerContentProvider : ContentProvider() {
                 "", // sticker_pack_privacy_policy_website
                 "", // sticker_pack_license_agreenment_website
                 "1", // image_data_version
-                1, // avoid_cache — always re-fetch so cached failures don't block re-import
+                1, // avoid_cache
                 0  // animated_sticker_pack
             )
             cursor.addRow(row)
         }
-        Log.d(TAG, "  buildPacksCursor finished — Rows: ${cursor.count}")
         return cursor
     }
 
@@ -210,8 +150,6 @@ class StickerContentProvider : ContentProvider() {
     ): Cursor {
         val cursor = MatrixCursor(STICKER_COLUMNS)
         stickers.forEach { sticker ->
-            val file = store.getStickerFile(packId, sticker.imageFileName)
-            Log.d(TAG, "  sticker ${sticker.imageFileName} — exists=${file.exists()}, size=${file.length()}B")
             cursor.addRow(arrayOf(
                 sticker.imageFileName,
                 sticker.emojis.take(3).joinToString(",")

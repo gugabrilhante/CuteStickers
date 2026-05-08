@@ -8,6 +8,5 @@ import dagger.hilt.android.HiltAndroidApp
 class ToastApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        Log.e("Sticker - App", "CRITICAL: ToastApplication.onCreate called!")
     }
 }

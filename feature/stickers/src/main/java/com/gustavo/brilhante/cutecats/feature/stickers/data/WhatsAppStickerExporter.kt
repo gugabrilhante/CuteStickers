@@ -27,22 +27,12 @@ internal class WhatsAppStickerExporter @Inject constructor(
         isPackageInstalled(WHATSAPP_PACKAGE) || isPackageInstalled(WHATSAPP_BUSINESS_PACKAGE)
 
     override fun buildExportIntent(pack: StickerPack): Result<Intent> = runCatching {
-        Log.d(TAG, "buildExportIntent starting for pack: ${pack.id}")
         // Resolve which WhatsApp variant is installed. setPackage() is required —
         // without it, Android may not route an implicit intent to WhatsApp at all.
         val targetPackage = when {
-            isPackageInstalled(WHATSAPP_PACKAGE) -> {
-                Log.d(TAG, "WhatsApp found: $WHATSAPP_PACKAGE")
-                WHATSAPP_PACKAGE
-            }
-            isPackageInstalled(WHATSAPP_BUSINESS_PACKAGE) -> {
-                Log.d(TAG, "WhatsApp Business found: $WHATSAPP_BUSINESS_PACKAGE")
-                WHATSAPP_BUSINESS_PACKAGE
-            }
-            else -> {
-                Log.e(TAG, "No WhatsApp variant found")
-                error("WhatsApp is not installed on this device")
-            }
+            isPackageInstalled(WHATSAPP_PACKAGE) -> WHATSAPP_PACKAGE
+            isPackageInstalled(WHATSAPP_BUSINESS_PACKAGE) -> WHATSAPP_BUSINESS_PACKAGE
+            else -> error("WhatsApp is not installed on this device")
         }
 
         // Validate that all sticker files actually exist on disk before launching WhatsApp.
@@ -51,10 +41,7 @@ internal class WhatsAppStickerExporter @Inject constructor(
         validatePackFiles(pack)
 
         val authority = "${context.packageName}.StickerContentProvider"
-        Log.d(TAG, "building intent — targetPackage=$targetPackage, authority=$authority, packId=${pack.id}, packName=${pack.name}")
-
         val metadataUri = Uri.parse("content://$authority/metadata/${pack.id}")
-        Log.d(TAG, "Metadata URI: $metadataUri")
 
         val intent = Intent(ACTION_ENABLE_STICKER_PACK).apply {
             setPackage(targetPackage)
@@ -68,18 +55,11 @@ internal class WhatsAppStickerExporter @Inject constructor(
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
 
-        Log.d(TAG, "Granting URI permission to $targetPackage")
         context.grantUriPermission(
             targetPackage,
             metadataUri,
             Intent.FLAG_GRANT_READ_URI_PERMISSION
         )
-
-        Log.d(TAG, "Intent built successfully:")
-        Log.d(TAG, "  Action: ${intent.action}")
-        Log.d(TAG, "  Package: $targetPackage")
-        Log.d(TAG, "  Intent ClipData: ${intent.clipData}")
-        Log.d(TAG, "  Flags: ${intent.flags}")
 
         intent
     }
@@ -89,13 +69,11 @@ internal class WhatsAppStickerExporter @Inject constructor(
 
         val trayFile = store.getStickerFile(pack.id, pack.trayImageFileName)
         if (!trayFile.exists()) error("Tray icon not found on disk: ${trayFile.absolutePath}")
-        Log.d(TAG, "tray icon OK — ${trayFile.length()}B")
 
         pack.stickers.forEach { sticker ->
             val file = store.getStickerFile(pack.id, sticker.imageFileName)
             if (!file.exists()) error("Sticker file missing: ${file.absolutePath}")
             if (file.length() == 0L) error("Sticker file is empty: ${file.absolutePath}")
-            Log.d(TAG, "sticker ${sticker.imageFileName} OK — ${file.length()}B")
         }
     }
 

@@ -43,8 +43,12 @@ internal class ImageProcessor @Inject constructor(
 
     private fun saveAsPng(bitmap: Bitmap, outputFile: File, maxBytes: Int): File {
         FileOutputStream(outputFile).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        bitmap.recycle()
-        return outputFile
+        return if (outputFile.length() > maxBytes) {
+            saveAsWebP(bitmap, outputFile, maxBytes)
+        } else {
+            bitmap.recycle()
+            outputFile
+        }
     }
 
     private fun downloadBitmap(url: String): Bitmap {

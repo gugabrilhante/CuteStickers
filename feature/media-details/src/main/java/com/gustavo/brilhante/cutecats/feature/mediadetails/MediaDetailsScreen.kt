@@ -135,9 +135,9 @@ fun MediaDetailsScreen(
     onBackClick: () -> Unit,
     onAddToWhatsApp: () -> Unit,
     onDownload: () -> Unit,
-    onConfirmExport: (StickerPack) -> Unit,
-    onDismissStickerSheet: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onConfirmExport: (StickerPack) -> Unit = {},
+    onDismissStickerSheet: () -> Unit = {},
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()

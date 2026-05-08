@@ -5,7 +5,6 @@ import android.content.Context
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
-import android.util.Log
 import com.gustavo.brilhante.cutecats.core.common.network.CatsDispatchers
 import com.gustavo.brilhante.cutecats.core.common.network.Dispatcher
 import com.gustavo.brilhante.cutecats.feature.stickers.domain.StickerItem
@@ -19,8 +18,6 @@ import okhttp3.Request
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
-
-private const val TAG = "Sticker - Repository"
 
 @Singleton
 internal class StickerRepositoryImpl @Inject constructor(
@@ -36,38 +33,29 @@ internal class StickerRepositoryImpl @Inject constructor(
         mediaId: String
     ): Result<StickerPack> = withContext(ioDispatcher) {
         runCatching {
-            // Using a new ID prefix to ensure WhatsApp treats it as a fresh pack
-            val packId = "cat_$mediaId" 
+            // Use a unique packId per export to ensure WhatsApp treats it as a new pack
+            val packId = "cat_${mediaId}_${System.currentTimeMillis()}"
             val shortId = if (mediaId.length > 4) mediaId.takeLast(4) else mediaId
             val packName = "CuteCat $shortId"
-            Log.d(TAG, "createSticker — packId=$packId, packName=$packName")
 
-            // Download and process the sticker image once (512×512, ≤ 100 KB WebP)
             val primaryFile = fileManager.stickerFile(packId, mediaId)
             imageProcessor.downloadAndProcess(imageUrl, primaryFile, ImageProcessor.STICKER_SIZE)
                 .getOrThrow()
-            Log.d(TAG, "primary sticker written — ${primaryFile.absolutePath} (${primaryFile.length()}B)")
 
-            // WhatsApp enforces a minimum of 3 stickers per pack.
-            // Reuse the same image rather than downloading it again.
             val copy2 = fileManager.stickerFile(packId, "${mediaId}_2")
             val copy3 = fileManager.stickerFile(packId, "${mediaId}_3")
             primaryFile.copyTo(copy2, overwrite = true)
             primaryFile.copyTo(copy3, overwrite = true)
-            Log.d(TAG, "sticker copies written — ${copy2.name}, ${copy3.name}")
 
-            // Tray icon (96×96, ≤ 50 KB WebP) shown in WhatsApp sticker picker
             val trayFile = fileManager.trayIconFile(packId)
             imageProcessor.downloadAndProcess(imageUrl, trayFile, ImageProcessor.TRAY_SIZE)
                 .getOrThrow()
-            Log.d(TAG, "tray icon written — ${trayFile.absolutePath} (${trayFile.length()}B)")
 
             val stickers = listOf(
                 StickerInfo(imageFileName = primaryFile.name),
                 StickerInfo(imageFileName = copy2.name),
                 StickerInfo(imageFileName = copy3.name)
             )
-            Log.d(TAG, "preparing StickerPackInfo with ${stickers.size} stickers")
             val packInfo = StickerPackInfo(
                 id = packId,
                 name = packName,
@@ -76,7 +64,6 @@ internal class StickerRepositoryImpl @Inject constructor(
                 stickers = stickers
             )
             StickerStore(context).savePack(packInfo)
-            Log.d(TAG, "pack info saved successfully for packId: $packId")
 
             StickerPack(
                 id = packId,
@@ -93,6 +80,7 @@ internal class StickerRepositoryImpl @Inject constructor(
             runCatching {
                 val request = Request.Builder().url(imageUrl).build()
                 val bytes = okHttpClient.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) error("Failed to download image: ${response.code} ${response.message}")
                     response.body?.bytes() ?: error("Empty image response")
                 }
                 writeToGallery(bytes, "cutesticker_${System.currentTimeMillis()}.jpg")
