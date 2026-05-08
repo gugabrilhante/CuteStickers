@@ -38,6 +38,7 @@
         <provider
             android:name="com.gustavo.brilhante.cutecats.feature.stickers.provider.StickerContentProvider"
             android:authorities="com.gustavo.brilhante.cutecats.StickerContentProvider"
+            android:readPermission="com.whatsapp.sticker.READ"
             android:enabled="true"
             android:exported="true"
             android:grantUriPermissions="true" />
