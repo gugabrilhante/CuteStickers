@@ -23,10 +23,15 @@ internal data class StickerInfo(
 )
 
 internal class StickerStore(context: Context) {
-    private val stickersRoot = File(context.filesDir, "stickers")
+    val stickersRoot = File(context.filesDir, "stickers")
 
     companion object {
         private val json = Json { ignoreUnknownKeys = true }
+    }
+
+    fun getPackVersion(packId: String): String {
+        val infoFile = File(File(stickersRoot, packId), "pack_info.json")
+        return if (infoFile.exists()) infoFile.lastModified().toString() else "1"
     }
 
     fun savePack(pack: StickerPackInfo) {

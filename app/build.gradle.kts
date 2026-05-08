@@ -18,7 +18,7 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "com.gustavo.brilhante.cutecats.HiltTestRunner"
     }
 
     buildTypes {
@@ -75,6 +75,8 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.ui.test.junit4)
+    androidTestImplementation(libs.dagger.hilt.testing)
+    kspAndroidTest(libs.dagger.hilt.compiler)
     debugImplementation(platform(bom))
     debugImplementation(libs.androidx.ui.test.manifest)
 }

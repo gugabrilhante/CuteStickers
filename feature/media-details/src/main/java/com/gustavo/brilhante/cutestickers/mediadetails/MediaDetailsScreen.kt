@@ -163,7 +163,12 @@ fun MediaDetailsScreen(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 TopAppBar(
-                    title = { Text("Media Details") },
+                    title = {
+                        Text(
+                            text = "Media Details",
+                            modifier = Modifier.testTag("media_details_title")
+                        )
+                    },
                     navigationIcon = {
                         IconButton(onClick = onBackClick) {
                             Icon(

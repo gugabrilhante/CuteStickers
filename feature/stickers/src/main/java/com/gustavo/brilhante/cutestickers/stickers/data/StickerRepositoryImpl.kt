@@ -16,6 +16,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -98,10 +99,23 @@ internal class StickerRepositoryImpl @Inject constructor(
             val resolver = context.contentResolver
             val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
                 ?: error("Failed to insert image into MediaStore")
-            resolver.openOutputStream(uri)?.use { it.write(bytes) }
-            values.clear()
-            values.put(MediaStore.Images.Media.IS_PENDING, 0)
-            resolver.update(uri, values, null, null)
+
+            try {
+                val outputStream = resolver.openOutputStream(uri)
+                if (outputStream == null) {
+                    resolver.delete(uri, null, null)
+                    throw IOException("Failed to open output stream for $uri")
+                }
+
+                outputStream.use { it.write(bytes) }
+
+                values.clear()
+                values.put(MediaStore.Images.Media.IS_PENDING, 0)
+                resolver.update(uri, values, null, null)
+            } catch (e: Exception) {
+                resolver.delete(uri, null, null)
+                throw e
+            }
         } else {
             val dir = File(
                 @Suppress("DEPRECATION")
