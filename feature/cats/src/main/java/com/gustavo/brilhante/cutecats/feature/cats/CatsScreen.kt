@@ -23,9 +23,10 @@ fun CatsRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     DiscoverScreen(
-        title = "Cats",
         uiState = uiState,
         onItemClick = onItemClick,
+        onRefresh = viewModel::refresh,
+        onLoadMore = viewModel::loadMore,
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope,
         modifier = modifier

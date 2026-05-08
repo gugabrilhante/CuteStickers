@@ -6,17 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.gustavo.brilhante.cutecats.core.data"
+    namespace = "com.gustavo.brilhante.cutecats.core.database"
     compileSdk = 36
 
     defaultConfig {
         minSdk = 24
-    }
-
-    buildTypes {
-        debug {
-            enableUnitTestCoverage = true
-        }
     }
 
     compileOptions {
@@ -29,11 +23,12 @@ android {
 }
 
 dependencies {
-    api(project(":core:model"))
-    api(project(":core:domain"))
-    api(project(":core:network"))
-    implementation(project(":core:database"))
+    implementation(project(":core:model"))
     implementation(project(":core:common"))
+
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
 
     implementation(libs.dagger.hilt.android)
     ksp(libs.dagger.hilt.compiler)
@@ -41,7 +36,4 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
-    androidTestImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
 }

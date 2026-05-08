@@ -19,16 +19,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,58 +39,72 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
-import androidx.compose.ui.platform.testTag
 import com.gustavo.brilhante.cutecats.core.model.MediaItem
 
 sealed interface DiscoverUiState {
     data object Loading : DiscoverUiState
-    data class Success(val items: List<MediaItem>) : DiscoverUiState
+    data class Success(
+        val items: List<MediaItem>,
+        val isRefreshing: Boolean = false,
+        val isLoadingMore: Boolean = false
+    ) : DiscoverUiState
     data class Error(val message: String) : DiscoverUiState
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun DiscoverScreen(
-    title: String,
     uiState: DiscoverUiState,
     onItemClick: (MediaItem) -> Unit,
+    onRefresh: () -> Unit,
+    onLoadMore: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier
 ) {
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
-
-    Scaffold(
-        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            TopAppBar(
-                title = { Text(title) },
-                scrollBehavior = scrollBehavior
-            )
+    val gridState = rememberLazyGridState()
+    
+    val shouldLoadMore = remember {
+        derivedStateOf {
+            val totalItemsCount = gridState.layoutInfo.totalItemsCount
+            val lastVisibleItemIndex = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            lastVisibleItemIndex >= totalItemsCount - 4 && totalItemsCount > 0
         }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            when (uiState) {
-                is DiscoverUiState.Loading -> {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
-                        contentPadding = PaddingValues(8.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(10) {
-                            ShimmerItem()
-                        }
+    }
+
+    LaunchedEffect(shouldLoadMore.value) {
+        if (shouldLoadMore.value && uiState is DiscoverUiState.Success && !uiState.isLoadingMore) {
+            onLoadMore()
+        }
+    }
+
+    Box(
+        modifier = modifier.fillMaxSize()
+    ) {
+        when (uiState) {
+            is DiscoverUiState.Loading -> {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(8.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(10) {
+                        ShimmerItem()
                     }
                 }
-                is DiscoverUiState.Success -> {
+            }
+            is DiscoverUiState.Success -> {
+                PullToRefreshBox(
+                    isRefreshing = uiState.isRefreshing,
+                    onRefresh = onRefresh,
+                    modifier = Modifier.fillMaxSize()
+                ) {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),
+                        state = gridState,
                         contentPadding = PaddingValues(8.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
@@ -101,14 +117,19 @@ fun DiscoverScreen(
                                 modifier = Modifier.animateItem()
                             )
                         }
+                        if (uiState.isLoadingMore) {
+                            items(2) {
+                                ShimmerItem()
+                            }
+                        }
                     }
                 }
-                is DiscoverUiState.Error -> {
-                    Text(
-                        text = uiState.message,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
+            }
+            is DiscoverUiState.Error -> {
+                Text(
+                    text = uiState.message,
+                    modifier = Modifier.align(Alignment.Center)
+                )
             }
         }
     }
