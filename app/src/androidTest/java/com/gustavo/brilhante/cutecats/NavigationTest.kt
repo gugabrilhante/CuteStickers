@@ -1,18 +1,25 @@
 package com.gustavo.brilhante.cutecats
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
 import org.junit.Rule
 import org.junit.Test
 
+@HiltAndroidTest
 class NavigationTest {
 
-    @get:Rule
+    @get:Rule(order = 0)
+    val hiltRule = HiltAndroidRule(this)
+
+    @get:Rule(order = 1)
     val composeTestRule = createAndroidComposeRule<MainActivity>()
 
     @Test
@@ -27,6 +34,10 @@ class NavigationTest {
         composeTestRule.onAllNodesWithTag("media_card").onFirst().performClick()
 
         // Check if Media Details screen is shown
+        // We wait for it because of navigation transitions
+        composeTestRule.waitUntil(timeoutMillis = 5000) {
+            composeTestRule.onAllNodesWithText("Media Details").fetchSemanticsNodes().isNotEmpty()
+        }
         composeTestRule.onNodeWithText("Media Details").assertIsDisplayed()
         
         // Check if hero image is displayed
