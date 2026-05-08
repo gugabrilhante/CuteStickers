@@ -21,10 +21,10 @@ class NavigationTest {
         // Note: In a real app we might need to handle idling resources for network
         
         composeTestRule.waitUntil(timeoutMillis = 10000) {
-            composeTestRule.onAllNodesWithTag("image-", substring = true).fetchSemanticsNodes().isNotEmpty()
+            composeTestRule.onAllNodesWithTag("media_card").fetchSemanticsNodes().isNotEmpty()
         }
 
-        composeTestRule.onAllNodesWithTag("image-", substring = true).onFirst().performClick()
+        composeTestRule.onAllNodesWithTag("media_card").onFirst().performClick()
 
         // Check if Media Details screen is shown
         composeTestRule.onNodeWithText("Media Details").assertIsDisplayed()

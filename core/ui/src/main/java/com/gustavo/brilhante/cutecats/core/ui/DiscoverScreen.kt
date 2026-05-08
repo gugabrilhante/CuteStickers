@@ -39,6 +39,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
+import androidx.compose.ui.platform.testTag
 import com.gustavo.brilhante.cutecats.core.model.MediaItem
 
 sealed interface DiscoverUiState {
@@ -127,7 +128,8 @@ fun MediaCard(
         modifier = modifier
             .padding(8.dp)
             .fillMaxWidth()
-            .aspectRatio(1f),
+            .aspectRatio(1f)
+            .testTag("media_card"),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
