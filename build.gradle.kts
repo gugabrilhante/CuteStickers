@@ -1,15 +1,104 @@
 
-buildscript {
-    dependencies {
-        classpath("com.google.dagger:hilt-android-gradle-plugin:2.48")
-    }
-}
-
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlin.compose) apply false
-    alias(libs.plugins.kotlin.kapt) apply false
+    alias(libs.plugins.google.devtools.ksp) apply false
     alias(libs.plugins.dagger.hilt.android) apply false
+    alias(libs.plugins.android.library) apply false
+    alias(libs.plugins.kotlin.serialization) apply false
+}
+
+// ── JaCoCo aggregated coverage ────────────────────────────────────────────────
+// Usage:  ./gradlew testDebugUnitTest jacocoTestReport
+// Output: build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml
+//
+// Coverage for Android modules is driven by enableUnitTestCoverage = true in
+// each module's debug buildType (set in the individual build.gradle.kts files).
+// AGP writes exec files to:
+//   <module>/build/outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec
+//
+// NOTE: Do NOT apply the Gradle jacoco plugin to Android submodules — it is
+// incompatible with AGP 8.x's AndroidUnitTest task (TypeNotPresentException).
+// Apply it only to the root project and pure-JVM modules.
+
+val jacocoExclusions = listOf(
+    "**/R.class", "**/R\$*.class", "**/BuildConfig.*", "**/Manifest*.*",
+    "**/*Test*.*", "android/**/*.*",
+    "**/Hilt_*", "**/*_HiltModules*", "**/*_Factory*", "**/*_MembersInjector*",
+    "**/DaggerHilt*", "**/ComposableSingletons*",
+    "**/*Preview*", "**/*Theme*", "**/*ColorKt*", "**/*TypographyKt*",
+    "**/*TypeKt*", "**/*ShapeKt*", "**/*Navigation*", "**/*Route*",
+)
+
+// Apply jacoco only to the pure-JVM :core:model module — safe because it has
+// no Android tasks that would clash with the plugin.
+subprojects {
+    plugins.withId("org.jetbrains.kotlin.jvm") {
+        apply(plugin = "jacoco")
+        configure<JacocoPluginExtension> { toolVersion = "0.8.12" }
+    }
+}
+
+// Root-level jacoco plugin is needed for the JacocoReport task type below.
+apply(plugin = "jacoco")
+configure<JacocoPluginExtension> { toolVersion = "0.8.12" }
+
+tasks.register<JacocoReport>("jacocoTestReport") {
+    group = "verification"
+    description = "Generates aggregated JaCoCo coverage report for all modules."
+
+    // Wait for every module's unit-test task before generating the report.
+    dependsOn(
+        subprojects.flatMap { proj ->
+            proj.tasks.matching { t -> t.name == "testDebugUnitTest" || t.name == "test" }
+        }
+    )
+
+    reports {
+        xml.required.set(true)
+        xml.outputLocation.set(
+            file("${layout.buildDirectory.get()}/reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
+        )
+        html.required.set(true)
+        html.outputLocation.set(
+            file("${layout.buildDirectory.get()}/reports/jacoco/jacocoTestReport/html")
+        )
+    }
+
+    classDirectories.setFrom(
+        files(
+            subprojects.flatMap { proj ->
+                listOf(
+                    // Android modules: AGP 8.3+ / 9.x Kotlin class path
+                    fileTree("${proj.layout.buildDirectory.get()}/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes") {
+                        exclude(jacocoExclusions)
+                    },
+                    // Pure JVM module (:core:model)
+                    fileTree("${proj.layout.buildDirectory.get()}/classes/kotlin/main") {
+                        exclude(jacocoExclusions)
+                    },
+                )
+            }
+        )
+    )
+
+    sourceDirectories.setFrom(
+        files(
+            subprojects.flatMap { proj ->
+                listOf("src/main/java", "src/main/kotlin").map { "${proj.projectDir}/$it" }
+            }
+        )
+    )
+
+    // AGP's enableUnitTestCoverage writes exec files here (AGP 7+ / 8.x / 9.x).
+    executionData.setFrom(
+        fileTree(rootDir) {
+            include("**/outputs/unit_test_code_coverage/**/*.exec")
+            include("**/outputs/code_coverage/**/*.ec")
+            // Gradle jacoco plugin path (used by :core:model / pure JVM modules)
+            include("**/build/jacoco/*.exec")
+        }
+    )
 }

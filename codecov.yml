@@ -1,0 +1,42 @@
+codecov:
+  branch: master
+  notify:
+    require_ci_to_pass: yes
+
+coverage:
+  status:
+    project:
+      default:
+        # Informational only: total project coverage does not block PRs.
+        # Baseline is updated on every push to master.
+        informational: true
+    patch:
+      default:
+        # Changed lines in a PR must be at least 60% covered.
+        target: 60%
+        threshold: 5%
+        informational: false
+
+comment:
+  layout: "reach,diff,flags,tree"
+  behavior: default
+  require_changes: false
+
+github_checks:
+  annotations: true
+
+ignore:
+  - "**/R.class"
+  - "**/R$*.class"
+  - "**/BuildConfig.*"
+  - "**/Manifest*.*"
+  - "**/*Test*.*"
+  - "android/**/*.*"
+  - "**/Hilt_*"
+  - "**/*_HiltModules*"
+  - "**/*_Factory*"
+  - "**/*_MembersInjector*"
+  - "**/DaggerHilt*"
+  - "**/ComposableSingletons*"
+  - "**/*Navigation*"
+  - "**/*Route*"

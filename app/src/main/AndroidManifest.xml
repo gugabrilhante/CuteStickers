@@ -3,6 +3,14 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
+    <queries>
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
+    </queries>
 
     <application
         android:name=".ToastApplication"
@@ -15,17 +23,26 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CuteCats"
         tools:targetApi="31">
+
         <activity
-            android:name=".ItemsActivity"
+            android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.CuteCats">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <provider
+            android:name="com.gustavo.brilhante.cutecats.feature.stickers.provider.StickerContentProvider"
+            android:authorities="${applicationId}.StickerContentProvider"
+            android:readPermission="com.whatsapp.sticker.READ"
+            android:enabled="true"
+            android:exported="true"
+            android:grantUriPermissions="true" />
+
     </application>
 
 </manifest>
