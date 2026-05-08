@@ -87,13 +87,15 @@ class StickerContentProvider : ContentProvider() {
             STICKERS -> {
                 val packId = uri.lastPathSegment ?: return null
                 val stickers = store.loadStickers(packId)
-                buildStickersCursor(packId, stickers, store)
+                buildStickersCursor(stickers)
             }
             else -> null
         }
     }
 
     override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor {
+        if (mode != "r") throw SecurityException("Only read-only mode is supported")
+        
         val match = uriMatcher.match(uri)
         if (match != STICKERS_ASSET) throw FileNotFoundException("Unrecognised URI: $uri")
         
@@ -103,7 +105,23 @@ class StickerContentProvider : ContentProvider() {
         val packId = segments[1]
         val fileName = segments[2]
 
-        val file = StickerStore(context!!).getStickerFile(packId, fileName)
+        // Sanitize path segments to prevent path traversal
+        if (packId.isBlank() || packId.contains("..") || packId.contains("/") || packId.contains("\\")) {
+            throw IllegalArgumentException("Invalid packId")
+        }
+        if (fileName.isBlank() || fileName.contains("..") || fileName.contains("/") || fileName.contains("\\")) {
+            throw IllegalArgumentException("Invalid fileName")
+        }
+
+        val store = StickerStore(context!!)
+        val file = store.getStickerFile(packId, fileName)
+        
+        // Verify canonical path stays under the stickers root
+        val rootPath = store.stickersRoot.canonicalPath
+        if (!file.canonicalPath.startsWith(rootPath)) {
+            throw SecurityException("Path traversal attempt detected")
+        }
+
         if (!file.exists()) throw FileNotFoundException("Sticker not found: $packId/$fileName")
         
         return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
@@ -122,6 +140,7 @@ class StickerContentProvider : ContentProvider() {
 
     private fun buildPacksCursor(packs: List<StickerPackInfo>): Cursor {
         val cursor = MatrixCursor(PACK_COLUMNS)
+        val store = StickerStore(context!!)
         packs.forEach { pack ->
             val row = arrayOf<Any?>(
                 pack.id,
@@ -134,7 +153,7 @@ class StickerContentProvider : ContentProvider() {
                 "", // sticker_pack_publisher_website
                 "", // sticker_pack_privacy_policy_website
                 "", // sticker_pack_license_agreenment_website
-                "1", // image_data_version
+                store.getPackVersion(pack.id), // image_data_version
                 1, // avoid_cache
                 0  // animated_sticker_pack
             )
@@ -144,9 +163,7 @@ class StickerContentProvider : ContentProvider() {
     }
 
     private fun buildStickersCursor(
-        packId: String,
-        stickers: List<StickerInfo>,
-        store: StickerStore
+        stickers: List<StickerInfo>
     ): Cursor {
         val cursor = MatrixCursor(STICKER_COLUMNS)
         stickers.forEach { sticker ->
