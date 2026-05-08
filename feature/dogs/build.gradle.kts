@@ -46,7 +46,9 @@ android {
 
 dependencies {
     implementation(project(":core:network"))
+    implementation(project(":core:database"))
     implementation(project(":core:domain"))
+    implementation(project(":core:data"))
     implementation(project(":core:ui"))
     implementation(project(":core:common"))
     implementation(project(":core:designsystem"))
@@ -59,6 +61,9 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
     implementation(libs.dagger.hilt.android)
     ksp(libs.dagger.hilt.compiler)
 }

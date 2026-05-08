@@ -6,10 +6,6 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -20,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
+import androidx.compose.ui.res.stringResource
+import com.gustavo.brilhante.cutecats.R
 import com.gustavo.brilhante.cutecats.feature.cats.CatsRoute
 import com.gustavo.brilhante.cutecats.feature.dogs.DogsRoute
 import com.gustavo.brilhante.cutecats.feature.mediadetails.MediaDetailsRoute
@@ -93,12 +91,17 @@ fun CuteStickersApp() {
                         val selected = screen == navigationState.topLevelRoute
                         NavigationBarItem(
                             icon = {
-                                Icon(
-                                    if (screen is Screen.Cats) Icons.Default.Home else Icons.AutoMirrored.Filled.List,
-                                    contentDescription = null
+                                Text(if (screen is Screen.Cats) "😸" else "🐶")
+                            },
+                            label = { 
+                                Text(
+                                    if (screen is Screen.Cats) {
+                                        stringResource(R.string.cats)
+                                    } else {
+                                        stringResource(R.string.dogs)
+                                    }
                                 )
                             },
-                            label = { Text(if (screen is Screen.Cats) "Cats" else "Dogs") },
                             selected = selected,
                             onClick = {
                                 navigator.navigate(screen)

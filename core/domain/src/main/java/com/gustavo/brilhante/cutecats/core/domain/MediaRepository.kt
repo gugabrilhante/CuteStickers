@@ -5,4 +5,6 @@ import kotlinx.coroutines.flow.Flow
 
 interface MediaRepository {
     fun getMedia(): Flow<List<MediaItem>>
+    suspend fun refresh()
+    suspend fun loadNextPage()
 }

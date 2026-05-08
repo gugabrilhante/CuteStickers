@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Gatitos Lindos</string>
+    <string name="cats">Gatos</string>
+    <string name="dogs">Perros</string>
+</resources>

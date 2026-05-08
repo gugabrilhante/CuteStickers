@@ -6,5 +6,8 @@ import retrofit2.http.Query
 
 interface MediaService {
     @GET("images/search")
-    suspend fun getMedia(@Query("limit") limit: Int = 20): List<NetworkMediaItem>
+    suspend fun getMedia(
+        @Query("limit") limit: Int = 20,
+        @Query("page") page: Int = 0
+    ): List<NetworkMediaItem>
 }
