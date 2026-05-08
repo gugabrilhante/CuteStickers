@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.gustavo.brilhante.cutecats.core.domain"
+    namespace = "com.gustavo.brilhante.cutestickers.domain"
     compileSdk = 36
 
     defaultConfig {

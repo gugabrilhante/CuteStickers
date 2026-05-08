@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.gustavo.brilhante.cutecats.core.database"
+    namespace = "com.gustavo.brilhante.cutestickers.database"
     compileSdk = 36
 
     defaultConfig {
@@ -26,8 +26,8 @@ dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:common"))
 
-    implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
+    api(libs.room.runtime)
+    api(libs.room.ktx)
     ksp(libs.room.compiler)
 
     implementation(libs.dagger.hilt.android)
