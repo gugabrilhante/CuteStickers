@@ -53,7 +53,9 @@ dependencies {
     implementation(libs.coil.compose)
 
     testImplementation(libs.junit)
+    androidTestImplementation(platform(bom))
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.ui.test.junit4)
+    debugImplementation(platform(bom))
     debugImplementation(libs.androidx.ui.test.manifest)
 }
