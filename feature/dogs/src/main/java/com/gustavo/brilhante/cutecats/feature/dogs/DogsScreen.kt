@@ -23,7 +23,6 @@ fun DogsRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     DiscoverScreen(
-        title = "Dogs",
         uiState = uiState,
         onItemClick = onItemClick,
         onRefresh = viewModel::refresh,

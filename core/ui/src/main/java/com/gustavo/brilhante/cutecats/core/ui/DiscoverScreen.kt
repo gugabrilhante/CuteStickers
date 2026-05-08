@@ -24,10 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -60,7 +57,6 @@ sealed interface DiscoverUiState {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun DiscoverScreen(
-    title: String,
     uiState: DiscoverUiState,
     onItemClick: (MediaItem) -> Unit,
     onRefresh: () -> Unit,
@@ -69,7 +65,6 @@ fun DiscoverScreen(
     animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier
 ) {
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val gridState = rememberLazyGridState()
     
     val shouldLoadMore = remember {
@@ -86,67 +81,55 @@ fun DiscoverScreen(
         }
     }
 
-    Scaffold(
-        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            TopAppBar(
-                title = { Text(title) },
-                scrollBehavior = scrollBehavior
-            )
-        }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            when (uiState) {
-                is DiscoverUiState.Loading -> {
+    Box(
+        modifier = modifier.fillMaxSize()
+    ) {
+        when (uiState) {
+            is DiscoverUiState.Loading -> {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(8.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(10) {
+                        ShimmerItem()
+                    }
+                }
+            }
+            is DiscoverUiState.Success -> {
+                PullToRefreshBox(
+                    isRefreshing = uiState.isRefreshing,
+                    onRefresh = onRefresh,
+                    modifier = Modifier.fillMaxSize()
+                ) {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),
+                        state = gridState,
                         contentPadding = PaddingValues(8.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        items(10) {
-                            ShimmerItem()
+                        items(uiState.items, key = { it.id }) { item ->
+                            MediaCard(
+                                item = item,
+                                onItemClick = onItemClick,
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = animatedVisibilityScope,
+                                modifier = Modifier.animateItem()
+                            )
                         }
-                    }
-                }
-                is DiscoverUiState.Success -> {
-                    PullToRefreshBox(
-                        isRefreshing = uiState.isRefreshing,
-                        onRefresh = onRefresh,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(2),
-                            state = gridState,
-                            contentPadding = PaddingValues(8.dp),
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            items(uiState.items, key = { it.id }) { item ->
-                                MediaCard(
-                                    item = item,
-                                    onItemClick = onItemClick,
-                                    sharedTransitionScope = sharedTransitionScope,
-                                    animatedVisibilityScope = animatedVisibilityScope,
-                                    modifier = Modifier.animateItem()
-                                )
-                            }
-                            if (uiState.isLoadingMore) {
-                                items(2) {
-                                    ShimmerItem()
-                                }
+                        if (uiState.isLoadingMore) {
+                            items(2) {
+                                ShimmerItem()
                             }
                         }
                     }
                 }
-                is DiscoverUiState.Error -> {
-                    Text(
-                        text = uiState.message,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
+            }
+            is DiscoverUiState.Error -> {
+                Text(
+                    text = uiState.message,
+                    modifier = Modifier.align(Alignment.Center)
+                )
             }
         }
     }
