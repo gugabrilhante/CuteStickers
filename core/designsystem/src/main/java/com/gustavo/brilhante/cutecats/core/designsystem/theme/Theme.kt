@@ -16,21 +16,55 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = BrightMint,
+    onPrimary = OnBrightMint,
+    primaryContainer = BrightMintContainer,
+    onPrimaryContainer = OnBrightMintContainer,
+    secondary = BrightLime,
+    onSecondary = OnBrightLime,
+    secondaryContainer = BrightLimeContainer,
+    onSecondaryContainer = OnBrightLimeContainer,
+    tertiary = DarkPastelGreen,
+    onTertiary = OnDarkPastelGreen,
+    tertiaryContainer = DarkPastelGreenContainer,
+    onTertiaryContainer = OnDarkPastelGreenContainer,
+    background = DarkBackground,
+    onBackground = OnMintBackground,
+    surface = DarkSurface,
+    onSurface = OnMintSurface,
+    error = ErrorRed,
+    onError = OnErrorRed,
+    errorContainer = ErrorContainer,
+    onErrorContainer = OnErrorContainer
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    primary = MintGreen,
+    onPrimary = OnMintGreen,
+    primaryContainer = MintGreenContainer,
+    onPrimaryContainer = OnMintGreenContainer,
+    secondary = SoftLime,
+    onSecondary = OnSoftLime,
+    secondaryContainer = SoftLimeContainer,
+    onSecondaryContainer = OnSoftLimeContainer,
+    tertiary = PastelGreen,
+    onTertiary = OnPastelGreen,
+    tertiaryContainer = PastelGreenContainer,
+    onTertiaryContainer = OnPastelGreenContainer,
+    background = MintBackground,
+    onBackground = OnMintBackground,
+    surface = MintSurface,
+    onSurface = OnMintSurface,
+    error = ErrorRed,
+    onError = OnErrorRed,
+    errorContainer = ErrorContainer,
+    onErrorContainer = OnErrorContainer
 )
 
 @Composable
 fun CuteStickersTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false, // Set to false to prioritize our brand colors
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -45,6 +79,7 @@ fun CuteStickersTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
+            window.statusBarColor = colorScheme.background.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
