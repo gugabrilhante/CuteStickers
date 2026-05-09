@@ -17,7 +17,8 @@ android {
 
     buildTypes {
         debug {
-            enableUnitTestCoverage = false
+            enableUnitTestCoverage = true
+            enableAndroidTestCoverage = true
         }
     }
 

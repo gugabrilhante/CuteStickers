@@ -24,12 +24,20 @@ plugins {
 // Apply it only to the root project and pure-JVM modules.
 
 val jacocoExclusions = listOf(
-    "**/R.class", "**/R\$*.class", "**/BuildConfig.*", "**/Manifest*.*",
-    "**/*Test*.*", "android/**/*.*",
-    "**/Hilt_*", "**/*_HiltModules*", "**/*_Factory*", "**/*_MembersInjector*",
-    "**/DaggerHilt*", "**/ComposableSingletons*",
-    "**/*Preview*", "**/*Theme*", "**/*ColorKt*", "**/*TypographyKt*",
-    "**/*TypeKt*", "**/*ShapeKt*", "**/*Navigation*", "**/*Route*",
+    "**/R.class",
+    "**/R\$*.class",
+    "**/BuildConfig.*",
+    "**/Manifest*.*",
+    "**/*Test*.*",
+    "**/Hilt_*",
+    "**/*_HiltModules*",
+    "**/*_Factory*",
+    "**/*_MembersInjector*",
+    "**/DaggerHilt*",
+    "**/ComposableSingletons*",
+    "**/*_Impl.*",
+    "**/Dagger*.*",
+    "**/*_LifecycleAdapter.*",
 )
 
 // Apply jacoco only to the pure-JVM :core:model module — safe because it has
@@ -52,7 +60,11 @@ tasks.register<JacocoReport>("jacocoTestReport") {
     // Wait for every module's unit-test task before generating the report.
     dependsOn(
         subprojects.flatMap { proj ->
-            proj.tasks.matching { t -> t.name == "testDebugUnitTest" || t.name == "test" }
+            proj.tasks.matching { t -> 
+                t.name == "testDebugUnitTest" || 
+                t.name == "test" || 
+                t.name == "connectedDebugAndroidTest"
+            }
         }
     )
 
@@ -71,8 +83,12 @@ tasks.register<JacocoReport>("jacocoTestReport") {
         files(
             subprojects.flatMap { proj ->
                 listOf(
-                    // Android modules: AGP 8.3+ / 9.x Kotlin class path
-                    fileTree("${proj.layout.buildDirectory.get()}/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes") {
+                    // Android modules: Kotlin classes
+                    fileTree("${proj.layout.buildDirectory.get()}/tmp/kotlin-classes/debug") {
+                        exclude(jacocoExclusions)
+                    },
+                    // Android modules: Java classes
+                    fileTree("${proj.layout.buildDirectory.get()}/intermediates/javac/debug/classes") {
                         exclude(jacocoExclusions)
                     },
                     // Pure JVM module (:core:model)
