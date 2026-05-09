@@ -2,7 +2,6 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
     alias(libs.plugins.android.application) apply false
-    alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.google.devtools.ksp) apply false
     alias(libs.plugins.dagger.hilt.android) apply false
@@ -59,11 +58,11 @@ tasks.register<JacocoReport>("jacocoTestReport") {
 
     // Wait for every module's unit-test task before generating the report.
     dependsOn(
-        subprojects.flatMap { proj ->
-            proj.tasks.matching { t -> 
-                t.name == "testDebugUnitTest" || 
-                t.name == "test" || 
-                t.name == "connectedDebugAndroidTest"
+        subprojects.map { proj ->
+            proj.tasks.matching { t ->
+                (t.name == "testDebugUnitTest") ||
+                (t.name == "connectedDebugAndroidTest") ||
+                (t.name == "test" && !proj.plugins.hasPlugin("com.android.base"))
             }
         }
     )
@@ -110,11 +109,12 @@ tasks.register<JacocoReport>("jacocoTestReport") {
 
     // AGP's enableUnitTestCoverage writes exec files here (AGP 7+ / 8.x / 9.x).
     executionData.setFrom(
-        fileTree(rootDir) {
-            include("**/outputs/unit_test_code_coverage/**/*.exec")
-            include("**/outputs/code_coverage/**/*.ec")
-            // Gradle jacoco plugin path (used by :core:model / pure JVM modules)
-            include("**/build/jacoco/*.exec")
+        subprojects.map { proj ->
+            fileTree(proj.layout.buildDirectory.map { it.asFile }) {
+                include("outputs/unit_test_code_coverage/**/*.exec")
+                include("outputs/code_coverage/**/*.ec")
+                include("jacoco/*.exec") // For JVM modules like :core:model
+            }
         }
     )
 }
