@@ -289,9 +289,10 @@ fun StickerPreviewContent(
     onConfirm: () -> Unit
 ) {
     val context = LocalContext.current
+    // For preview, we show only the LATEST sticker added to the pack
     val stickerFile = remember(pack) {
-        val fileName = pack.stickers.first().imageFileName
-        File(File(context.filesDir, "stickers/${pack.id}"), fileName)
+        val lastStickerFileName = pack.stickers.last().imageFileName
+        File(File(context.filesDir, "stickers/${pack.id}"), lastStickerFileName)
     }
 
     Column(

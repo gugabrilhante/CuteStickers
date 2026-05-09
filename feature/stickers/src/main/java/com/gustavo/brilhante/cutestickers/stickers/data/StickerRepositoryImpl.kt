@@ -37,12 +37,13 @@ internal class StickerRepositoryImpl @Inject constructor(
     ): Result<StickerPack> = withContext(ioDispatcher) {
         runCatching {
             val isAnimated = mediaType is MediaType.Animated
-            // Use a unique packId per export to ensure WhatsApp treats it as a new pack
-            val packId = "${if (isAnimated) "anim_" else "cat_"}${mediaId}_${System.currentTimeMillis()}"
-            val shortId = if (mediaId.length > 4) mediaId.takeLast(4) else mediaId
-            val packName = "CuteSticker $shortId"
+            // Use a fixed packId to consolidate all stickers into a single pack per type (animated or static).
+            // WhatsApp allows up to 30 stickers per pack.
+            val packId = if (isAnimated) "cute_stickers_animated" else "cute_stickers_static"
+            val packName = if (isAnimated) "Cute Animated Stickers" else "Cute Stickers"
 
-            val primaryFile = fileManager.stickerFile(packId, mediaId)
+            val stickerFileName = "${mediaId}.webp"
+            val primaryFile = File(fileManager.packDir(packId), stickerFileName)
             
             if (isAnimated) {
                 imageProcessor.downloadAndProcessAnimated(imageUrl, primaryFile)
@@ -52,27 +53,26 @@ internal class StickerRepositoryImpl @Inject constructor(
                     .getOrThrow()
             }
 
-            val copy2 = fileManager.stickerFile(packId, "${mediaId}_2")
-            val copy3 = fileManager.stickerFile(packId, "${mediaId}_3")
-            primaryFile.copyTo(copy2, overwrite = true)
-            primaryFile.copyTo(copy3, overwrite = true)
-
             val trayFile = File(fileManager.packDir(packId), "tray_icon.png")
-            // Tray icon MUST be static for WhatsApp, even for animated packs. PNG is safer for tray.
+            // Always update tray icon to match the latest sticker added
             imageProcessor.downloadAndProcess(imageUrl, trayFile, ImageProcessor.TRAY_SIZE)
                 .getOrThrow()
 
-            val stickers = listOf(
-                StickerInfo(imageFileName = primaryFile.name),
-                StickerInfo(imageFileName = copy2.name),
-                StickerInfo(imageFileName = copy3.name)
-            )
+            // Load existing pack info if it exists to append the new sticker
+            val existingPack = StickerStore(context).loadAllPacks().find { it.id == packId }
+            val existingStickers = existingPack?.stickers ?: emptyList()
+            
+            // Avoid duplicates if the same mediaId is added again
+            val newStickerInfo = StickerInfo(imageFileName = stickerFileName)
+            val updatedStickers = (existingStickers.filter { it.imageFileName != stickerFileName } + newStickerInfo)
+                .takeLast(30) // WhatsApp limit is 30 stickers
+
             val packInfo = StickerPackInfo(
                 id = packId,
                 name = packName,
                 publisher = "CuteStickers",
                 trayImageFileName = trayFile.name,
-                stickers = stickers,
+                stickers = updatedStickers,
                 isAnimated = isAnimated
             )
             StickerStore(context).savePack(packInfo)
@@ -82,7 +82,7 @@ internal class StickerRepositoryImpl @Inject constructor(
                 name = packInfo.name,
                 publisher = packInfo.publisher,
                 trayImageFileName = packInfo.trayImageFileName,
-                stickers = stickers.map { StickerItem(imageFileName = it.imageFileName, emojis = listOf("😊")) },
+                stickers = updatedStickers.map { StickerItem(imageFileName = it.imageFileName, emojis = listOf("😊")) },
                 isAnimated = isAnimated
             )
         }
