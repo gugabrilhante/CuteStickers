@@ -4,8 +4,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import com.gustavo.brilhante.cutestickers.designsystem.theme.CuteStickersTheme
 import com.gustavo.brilhante.cutestickers.model.MediaItem
 import com.gustavo.brilhante.cutestickers.model.MediaType
 import org.junit.Rule
@@ -26,16 +27,25 @@ class DiscoverScreenTest {
         val uiState = DiscoverUiState.Success(items = items)
 
         composeTestRule.setContent {
-            SharedTransitionLayout {
-                AnimatedVisibility(visible = true) {
-                    DiscoverScreen(
-                        uiState = uiState,
-                        onItemClick = {},
-                        onRefresh = {},
-                        onLoadMore = {},
-                        sharedTransitionScope = this@SharedTransitionLayout,
-                        animatedVisibilityScope = this
-                    )
+            CuteStickersTheme {
+                SharedTransitionLayout {
+                    AnimatedVisibility(visible = true) {
+                        DiscoverScreen(
+                            uiState = uiState,
+                            onItemClick = {},
+                            onRefresh = {},
+                            onLoadMore = {},
+                            onAboutClick = {},
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            animatedVisibilityScope = this,
+                            badgeText = "Tap to create sticker",
+                            onboardingMessage = "Welcome",
+                            okText = "OK",
+                            showOnboarding = false,
+                            onOnboardingDismissed = {},
+                            title = "Discover"
+                        )
+                    }
                 }
             }
         }
