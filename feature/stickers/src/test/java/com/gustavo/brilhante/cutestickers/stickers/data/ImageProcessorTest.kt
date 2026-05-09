@@ -5,6 +5,7 @@ import android.graphics.*
 import android.net.Uri
 import android.util.Log
 import com.aureusapps.android.webpandroid.encoder.WebPAnimEncoder
+import com.gustavo.brilhante.cutestickers.common.Logger
 import io.mockk.*
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
@@ -23,8 +24,9 @@ class ImageProcessorTest {
     val tempFolder = TemporaryFolder()
 
     private val context = mockk<Context>(relaxed = true)
-    private val okHttpClient = mockk<OkHttpClient>()
-    private val imageProcessor = ImageProcessor(context, okHttpClient)
+    private val downloader = mockk<StickerDownloader>()
+    private val logger = mockk<Logger>(relaxed = true)
+    private val imageProcessor = ImageProcessor(context, downloader, logger)
 
     @Before
     fun setup() {
@@ -66,15 +68,8 @@ class ImageProcessorTest {
     }
 
     private fun setupMockResponse() {
-        val mockResponse = mockk<Response>()
-        val mockBody = "dummy gif bytes".toByteArray().toResponseBody("image/gif".toMediaType())
-        val mockCall = mockk<okhttp3.Call>()
-        
-        every { okHttpClient.newCall(any()) } returns mockCall
-        every { mockCall.execute() } returns mockResponse
-        every { mockResponse.isSuccessful } returns true
-        every { mockResponse.body } returns mockBody
-        every { mockResponse.close() } returns Unit
+        val mockBody = "dummy gif bytes".toByteArray()
+        coEvery { downloader.download(any()) } returns Result.success(mockBody)
     }
 
     @Test

@@ -17,7 +17,7 @@ import org.junit.Test
 import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class StickerIntegrationTest {
+internal class StickerIntegrationTest {
 
     private val imageProcessor = mockk<ImageProcessor>()
     private val fileManager = mockk<StickerFileManager>()
