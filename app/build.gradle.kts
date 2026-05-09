@@ -49,6 +49,7 @@ dependencies {
     implementation(project(":feature:media-details"))
     implementation(project(":feature:stickers"))
     implementation(project(":core:designsystem"))
+    implementation(project(":core:ui"))
     implementation(project(":core:common"))
     implementation(project(":core:data"))
     implementation(project(":core:model"))

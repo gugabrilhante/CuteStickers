@@ -1,0 +1,20 @@
+<resources>
+    <string name="cats">Cats</string>
+    <string name="dogs">Dogs</string>
+    <string name="tap_to_create_sticker">Tap to create sticker</string>
+    <string name="onboarding_message">Tap any image or GIF to create a sticker for WhatsApp.</string>
+    <string name="about">About</string>
+    <string name="about_title">About CuteStickers</string>
+    <string name="about_description">CuteStickers uses pet images and GIFs provided by The Cat API and The Dog API.</string>
+    <string name="the_cat_api">The Cat API</string>
+    <string name="the_dog_api">The Dog API</string>
+    <string name="ok">OK</string>
+    <string name="media_details">Media Details</string>
+    <string name="back">Back</string>
+    <string name="gif">GIF</string>
+    <string name="add_to_whatsapp">Add to WhatsApp</string>
+    <string name="download">Download</string>
+    <string name="my_stickers">My stickers</string>
+    <string name="tap_to_add_to_whatsapp">Tap to add this sticker to WhatsApp</string>
+    <string name="saved_to_gallery">Saved to gallery!</string>
+</resources>

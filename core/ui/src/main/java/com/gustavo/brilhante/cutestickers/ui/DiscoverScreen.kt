@@ -12,10 +12,12 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -42,6 +44,22 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.stringResource
+import com.gustavo.brilhante.cutestickers.ui.R as UiR
 import com.gustavo.brilhante.cutestickers.model.MediaItem
 
 sealed interface DiscoverUiState {
@@ -61,8 +79,15 @@ fun DiscoverScreen(
     onItemClick: (MediaItem) -> Unit,
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
+    onAboutClick: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
+    badgeText: String,
+    onboardingMessage: String,
+    okText: String,
+    showOnboarding: Boolean,
+    onOnboardingDismissed: () -> Unit,
+    title: String,
     modifier: Modifier = Modifier
 ) {
     val gridState = rememberLazyGridState()
@@ -81,55 +106,99 @@ fun DiscoverScreen(
         }
     }
 
-    Box(
-        modifier = modifier.fillMaxSize()
-    ) {
-        when (uiState) {
-            is DiscoverUiState.Loading -> {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    contentPadding = PaddingValues(8.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(10) {
-                        ShimmerItem()
-                    }
+    if (showOnboarding) {
+        AlertDialog(
+            onDismissRequest = onOnboardingDismissed,
+            confirmButton = {
+                TextButton(onClick = onOnboardingDismissed) {
+                    Text(okText)
                 }
-            }
-            is DiscoverUiState.Success -> {
-                PullToRefreshBox(
-                    isRefreshing = uiState.isRefreshing,
-                    onRefresh = onRefresh,
-                    modifier = Modifier.fillMaxSize()
-                ) {
+            },
+            title = { Text(title) },
+            text = { Text(onboardingMessage) }
+        )
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(title) },
+                actions = {
+                    IconButton(onClick = onAboutClick) {
+                        Icon(imageVector = Icons.Default.Info, contentDescription = "About")
+                    }
+                },
+                windowInsets = WindowInsets(0, 0, 0, 0),
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = androidx.compose.material3.MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.background
+                )
+            )
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(top = innerPadding.calculateTopPadding())
+        ) {
+            when (uiState) {
+                is DiscoverUiState.Loading -> {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),
-                        state = gridState,
-                        contentPadding = PaddingValues(8.dp),
+                        contentPadding = PaddingValues(
+                            start = 8.dp,
+                            end = 8.dp,
+                            top = 8.dp,
+                            bottom = innerPadding.calculateBottomPadding() + 8.dp
+                        ),
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        items(uiState.items, key = { it.id }) { item ->
-                            MediaCard(
-                                item = item,
-                                onItemClick = onItemClick,
-                                sharedTransitionScope = sharedTransitionScope,
-                                animatedVisibilityScope = animatedVisibilityScope,
-                                modifier = Modifier.animateItem()
-                            )
+                        items(10) {
+                            ShimmerItem()
                         }
-                        if (uiState.isLoadingMore) {
-                            items(2) {
-                                ShimmerItem()
+                    }
+                }
+                is DiscoverUiState.Success -> {
+                    PullToRefreshBox(
+                        isRefreshing = uiState.isRefreshing,
+                        onRefresh = onRefresh,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(2),
+                            state = gridState,
+                            contentPadding = PaddingValues(
+                                start = 8.dp,
+                                end = 8.dp,
+                                top = 8.dp,
+                                bottom = innerPadding.calculateBottomPadding() + 8.dp
+                            ),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(uiState.items, key = { it.id }) { item ->
+                                MediaCard(
+                                    item = item,
+                                    onItemClick = onItemClick,
+                                    sharedTransitionScope = sharedTransitionScope,
+                                    animatedVisibilityScope = animatedVisibilityScope,
+                                    badgeText = badgeText,
+                                    modifier = Modifier.animateItem()
+                                )
+                            }
+                            if (uiState.isLoadingMore) {
+                                items(2) {
+                                    ShimmerItem()
+                                }
                             }
                         }
                     }
                 }
-            }
-            is DiscoverUiState.Error -> {
-                Text(
-                    text = uiState.message,
-                    modifier = Modifier.align(Alignment.Center)
-                )
+                is DiscoverUiState.Error -> {
+                    Text(
+                        text = uiState.message,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
             }
         }
     }
@@ -142,16 +211,26 @@ fun MediaCard(
     onItemClick: (MediaItem) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
+    badgeText: String,
     modifier: Modifier = Modifier
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        label = "scale_animation"
+    )
+
     Card(
         onClick = { onItemClick(item) },
         modifier = modifier
             .padding(8.dp)
             .fillMaxWidth()
             .aspectRatio(1f)
+            .scale(scale)
             .testTag("media_card"),
         shape = RoundedCornerShape(16.dp),
+        interactionSource = interactionSource,
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         with(sharedTransitionScope) {
@@ -171,9 +250,31 @@ fun MediaCard(
                         ShimmerBox()
                     }
                 )
+                
+                // Badge "Tap to create sticker"
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
+                            )
+                        )
+                        .padding(top = 16.dp, bottom = 4.dp)
+                ) {
+                    Text(
+                        text = badgeText,
+                        modifier = Modifier.align(Alignment.Center),
+                        color = Color.White,
+                        style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                    )
+                }
+
                 if (item.type is com.gustavo.brilhante.cutestickers.model.MediaType.Animated) {
                     Text(
-                        text = "GIF",
+                        text = stringResource(UiR.string.gif),
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(8.dp)
