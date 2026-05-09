@@ -10,6 +10,10 @@ import android.os.ParcelFileDescriptor
 import com.gustavo.brilhante.cutestickers.stickers.data.StickerInfo
 import com.gustavo.brilhante.cutestickers.stickers.data.StickerPackInfo
 import com.gustavo.brilhante.cutestickers.stickers.data.StickerStore
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 import java.io.FileNotFoundException
 
 /**
@@ -21,6 +25,19 @@ import java.io.FileNotFoundException
  *   content://<authority>/stickers_asset/<packId>/<file>    → sticker or tray WebP file
  */
 class StickerContentProvider : ContentProvider() {
+
+    @EntryPoint
+    @InstallIn(SingletonComponent::class)
+    internal interface StickerContentProviderEntryPoint {
+        fun stickerStore(): StickerStore
+    }
+
+    private val stickerStore: StickerStore by lazy {
+        EntryPointAccessors.fromApplication(
+            context?.applicationContext ?: throw IllegalStateException("Context is null"),
+            StickerContentProviderEntryPoint::class.java
+        ).stickerStore()
+    }
 
     companion object {
         private const val METADATA_ALL = 1
@@ -72,7 +89,7 @@ class StickerContentProvider : ContentProvider() {
         sortOrder: String?
     ): Cursor? {
         val match = uriMatcher.match(uri)
-        val store = StickerStore(context!!)
+        val store = stickerStore
         return when (match) {
             METADATA_ALL -> {
                 val packs = store.loadAllPacks()
@@ -113,7 +130,7 @@ class StickerContentProvider : ContentProvider() {
             throw IllegalArgumentException("Invalid fileName")
         }
 
-        val store = StickerStore(context!!)
+        val store = stickerStore
         val file = store.getStickerFile(packId, fileName)
         
         // Verify canonical path stays under the stickers root
@@ -148,7 +165,7 @@ class StickerContentProvider : ContentProvider() {
 
     private fun buildPacksCursor(packs: List<StickerPackInfo>): Cursor {
         val cursor = MatrixCursor(PACK_COLUMNS)
-        val store = StickerStore(context!!)
+        val store = stickerStore
         packs.forEach { pack ->
             val row = arrayOf<Any?>(
                 pack.id,

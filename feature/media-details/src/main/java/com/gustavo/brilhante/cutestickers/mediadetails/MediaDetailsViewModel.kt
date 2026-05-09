@@ -1,9 +1,12 @@
 package com.gustavo.brilhante.cutestickers.mediadetails
 
+import android.app.Activity
 import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gustavo.brilhante.cutestickers.common.MediaMetadataResolver
 import com.gustavo.brilhante.cutestickers.stickers.domain.CreateStickerUseCase
+import com.gustavo.brilhante.cutestickers.stickers.domain.ExportMetadata
 import com.gustavo.brilhante.cutestickers.stickers.domain.ExportStickerPackUseCase
 import com.gustavo.brilhante.cutestickers.stickers.domain.SaveMediaUseCase
 import com.gustavo.brilhante.cutestickers.stickers.domain.StickerPack
@@ -47,7 +50,8 @@ sealed interface MediaDetailsEvent {
 class MediaDetailsViewModel @Inject constructor(
     private val createStickerUseCase: CreateStickerUseCase,
     private val exportStickerPackUseCase: ExportStickerPackUseCase,
-    private val saveMediaUseCase: SaveMediaUseCase
+    private val saveMediaUseCase: SaveMediaUseCase,
+    private val metadataResolver: MediaMetadataResolver
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MediaDetailsUiState())
@@ -57,7 +61,7 @@ class MediaDetailsViewModel @Inject constructor(
     val events = _events.receiveAsFlow()
 
     fun init(imageUrl: String, mediaId: String) {
-        val type = if (imageUrl.lowercase().contains("gif")) MediaType.Animated else MediaType.Static
+        val type = metadataResolver.getMediaType(imageUrl)
         _uiState.update { it.copy(imageUrl = imageUrl, mediaId = mediaId, mediaType = type) }
     }
 
@@ -80,24 +84,36 @@ class MediaDetailsViewModel @Inject constructor(
 
     fun onConfirmExport(pack: StickerPack) {
         viewModelScope.launch {
-            exportStickerPackUseCase.buildIntent(pack)
-                .onSuccess { intent ->
+            exportStickerPackUseCase.getExportMetadata(pack)
+                .onSuccess { metadata ->
+                    val intent = Intent().apply {
+                        action = "com.whatsapp.intent.action.ENABLE_STICKER_PACK"
+                        putExtra("sticker_pack_id", metadata.packId)
+                        putExtra("sticker_pack_authority", metadata.authority)
+                        putExtra("sticker_pack_name", metadata.packName)
+                        setPackage(metadata.targetPackage)
+                    }
                     _events.send(MediaDetailsEvent.LaunchIntent(intent))
                 }
                 .onFailure { e ->
                     _uiState.update {
-                        it.copy(stickerState = StickerState.Error(e.message ?: "WhatsApp not available"))
+                        it.copy(stickerState = StickerState.Error(e.message ?: "Export failed"))
                     }
                 }
         }
     }
 
-    fun DismissStickerSheet() {
-        _uiState.update { it.copy(stickerState = StickerState.Idle) }
+    fun onExportResult(resultCode: Int, data: Intent?) {
+        if (resultCode == Activity.RESULT_OK) {
+            _uiState.update { it.copy(stickerState = StickerState.Idle) }
+        } else {
+            val errorMessage = data?.getStringExtra("validation_error") ?: "Sticker pack not added"
+            _uiState.update { it.copy(stickerState = StickerState.Error(errorMessage)) }
+        }
     }
 
-    fun onExportResult(resultCode: Int, data: Intent?) {
-        // Log removed
+    fun dismissStickerSheet() {
+        _uiState.update { it.copy(stickerState = StickerState.Idle) }
     }
 
     fun onDownloadMedia() {

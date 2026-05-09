@@ -1,8 +1,16 @@
 package com.gustavo.brilhante.cutestickers.stickers.domain
 
-import android.content.Intent
+data class ExportMetadata(
+    val packId: String,
+    val authority: String,
+    val packName: String,
+    val publisher: String,
+    val trayImageFileName: String,
+    val isAnimated: Boolean,
+    val targetPackage: String
+)
 
 interface StickerExporter {
     fun isWhatsAppInstalled(): Boolean
-    fun buildExportIntent(pack: StickerPack): Result<Intent>
+    fun getExportMetadata(pack: StickerPack): Result<ExportMetadata>
 }
