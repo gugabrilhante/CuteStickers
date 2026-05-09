@@ -61,7 +61,7 @@ tasks.register<JacocoReport>("jacocoTestReport") {
         subprojects.map { proj ->
             proj.tasks.matching { t ->
                 (t.name == "testDebugUnitTest") ||
-                (t.name == "connectedDebugAndroidTest") ||
+                (t.name == "connectedDebugAndroidTest" && proj.file("src/androidTest").exists()) ||
                 (t.name == "test" && !proj.plugins.hasPlugin("com.android.base"))
             }
         }
