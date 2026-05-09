@@ -12,6 +12,7 @@ android {
 
     defaultConfig {
         minSdk = 24
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildFeatures {
@@ -53,8 +54,10 @@ dependencies {
     implementation(libs.coil.compose)
 
     testImplementation(libs.junit)
+    androidTestImplementation(libs.junit)
     androidTestImplementation(platform(bom))
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(platform(bom))
     debugImplementation(libs.androidx.ui.test.manifest)

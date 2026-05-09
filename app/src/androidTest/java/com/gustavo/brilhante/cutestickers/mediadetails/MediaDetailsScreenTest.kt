@@ -7,16 +7,26 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import com.gustavo.brilhante.cutestickers.mediadetails.DownloadState
+import com.gustavo.brilhante.cutestickers.mediadetails.MediaDetailsScreen
+import com.gustavo.brilhante.cutestickers.mediadetails.MediaDetailsUiState
+import com.gustavo.brilhante.cutestickers.mediadetails.StickerState
 import com.gustavo.brilhante.cutestickers.designsystem.theme.CuteStickersTheme
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
 import org.junit.Rule
 import org.junit.Test
 
+@HiltAndroidTest
 @OptIn(ExperimentalSharedTransitionApi::class)
 class MediaDetailsScreenTest {
 
-    @get:Rule
+    @get:Rule(order = 0)
+    val hiltRule = HiltAndroidRule(this)
+
+    @get:Rule(order = 1)
     val composeTestRule = createComposeRule()
 
     @Test
