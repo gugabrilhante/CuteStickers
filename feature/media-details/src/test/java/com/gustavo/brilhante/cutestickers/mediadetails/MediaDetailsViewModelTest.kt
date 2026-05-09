@@ -15,7 +15,9 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -32,13 +34,14 @@ class MediaDetailsViewModelTest {
     private val exportStickerPackUseCase = mockk<ExportStickerPackUseCase>()
     private val saveMediaUseCase = mockk<SaveMediaUseCase>()
     private val metadataResolver = mockk<MediaMetadataResolver>()
-    private val testDispatcher = StandardTestDispatcher()
+    private val testDispatcher = UnconfinedTestDispatcher()
 
     private lateinit var viewModel: MediaDetailsViewModel
 
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
+        every { metadataResolver.getMediaType(any()) } returns MediaType.Static
         viewModel = MediaDetailsViewModel(
             createStickerUseCase,
             exportStickerPackUseCase,
@@ -53,7 +56,7 @@ class MediaDetailsViewModelTest {
     }
 
     @Test
-    fun initSetsCorrectMediaTypeFromResolver() = runTest {
+    fun initSetsCorrectMediaTypeFromResolver() = runTest(testDispatcher) {
         val url = "https://example.com/cat.gif"
         every { metadataResolver.getMediaType(url) } returns MediaType.Animated
         
@@ -64,49 +67,47 @@ class MediaDetailsViewModelTest {
     }
 
     @Test
-    fun onAddToWhatsAppUpdatesStateToSuccess() = runTest {
+    fun onAddToWhatsAppUpdatesStateToSuccess() = runTest(testDispatcher) {
         val pack = StickerPack("id", "name", "pub", "tray", emptyList(), false)
-        every { metadataResolver.getMediaType(any()) } returns MediaType.Static
         coEvery { createStickerUseCase(any(), any(), any()) } returns Result.success(pack)
         
         viewModel.init("url", "id")
         viewModel.onAddToWhatsApp()
-        
-        testDispatcher.scheduler.advanceUntilIdle()
         
         assertTrue(viewModel.uiState.value.stickerState is StickerState.Success)
         assertEquals(pack, (viewModel.uiState.value.stickerState as StickerState.Success).pack)
     }
 
     @Test
-    fun onConfirmExportEmitsEvent() = runTest {
+    fun onConfirmExportEmitsEvent() = runTest(testDispatcher) {
         val pack = StickerPack("id", "name", "pub", "tray", emptyList(), false)
         val metadata = ExportMetadata("id", "auth", "name", "pub", "tray", false, "pkg")
         coEvery { exportStickerPackUseCase.getExportMetadata(pack) } returns Result.success(metadata)
         
+        val events = mutableListOf<MediaDetailsEvent>()
+        val collectJob = launch {
+            viewModel.events.toList(events)
+        }
+        
         viewModel.onConfirmExport(pack)
         
-        testDispatcher.scheduler.advanceUntilIdle()
-        
-        val event = viewModel.events.first()
-        assertTrue(event is MediaDetailsEvent.LaunchIntent)
+        assertTrue(events.first() is MediaDetailsEvent.LaunchIntent)
+        collectJob.cancel()
     }
 
     @Test
-    fun onExportResultSuccessUpdatesState() = runTest {
+    fun onExportResultSuccessUpdatesState() = runTest(testDispatcher) {
         viewModel.onExportResult(Activity.RESULT_OK, null)
         
         assertTrue(viewModel.uiState.value.stickerState is StickerState.Idle)
     }
 
     @Test
-    fun onDownloadMediaUpdatesToError() = runTest {
-        coEvery { saveMediaUseCase(any()) } returns Result.failure<Unit>(Exception("Disk full"))
+    fun onDownloadMediaUpdatesToError() = runTest(testDispatcher) {
+        coEvery { saveMediaUseCase(any()) } returns Result.failure(Exception("Disk full"))
         
         viewModel.init("url", "id")
         viewModel.onDownloadMedia()
-        
-        testDispatcher.scheduler.advanceUntilIdle()
         
         assertTrue(viewModel.uiState.value.downloadState is DownloadState.Error)
         assertEquals("Disk full", (viewModel.uiState.value.downloadState as DownloadState.Error).message)
