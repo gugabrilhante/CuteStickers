@@ -26,7 +26,9 @@ val OnMintBackground = Color(0xFF191C1B)
 
 // Dark Theme Colors
 val DarkBackground = Color(0xFF101614)
+val OnDarkBackground = Color(0xFFE1E3E0)
 val DarkSurface = Color(0xFF17201D)
+val OnDarkSurface = Color(0xFFE1E3E0)
 
 val BrightMint = Color(0xFF7BE6C1)
 val OnBrightMint = Color(0xFF003829)

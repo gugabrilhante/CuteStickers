@@ -31,5 +31,6 @@ android {
 dependencies {
     implementation(libs.dagger.hilt.android)
     ksp(libs.dagger.hilt.compiler)
+    implementation(libs.androidx.datastore.preferences)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
 }

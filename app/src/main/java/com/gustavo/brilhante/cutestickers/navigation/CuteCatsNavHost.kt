@@ -11,5 +11,8 @@ sealed interface Screen : NavKey {
     data object Dogs : Screen
 
     @Serializable
+    data object About : Screen
+
+    @Serializable
     data class MediaDetails(val imageUrl: String, val mediaId: String) : Screen
 }

@@ -41,6 +41,7 @@ fun rememberNavigationState(
         NavigationState(
             startRoute = startRoute,
             topLevelRoute = topLevelRoute,
+            topLevelRoutes = topLevelRoutes,
             backStacks = backStacks
         )
     }
@@ -56,6 +57,7 @@ fun rememberNavigationState(
 class NavigationState(
     val startRoute: NavKey,
     topLevelRoute: MutableState<NavKey>,
+    val topLevelRoutes: Set<NavKey>,
     val backStacks: Map<NavKey, NavBackStack<NavKey>>
 ) {
     var topLevelRoute: NavKey by topLevelRoute

@@ -60,6 +60,8 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import androidx.compose.ui.res.stringResource
+import com.gustavo.brilhante.cutestickers.ui.R as UiR
 import com.gustavo.brilhante.cutestickers.designsystem.theme.CuteStickersTheme
 import com.gustavo.brilhante.cutestickers.stickers.domain.StickerPack
 import kotlinx.coroutines.launch
@@ -144,6 +146,7 @@ fun MediaDetailsScreen(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
+    val savedToGalleryMessage = stringResource(UiR.string.saved_to_gallery)
 
     LaunchedEffect(uiState.stickerState) {
         when (val state = uiState.stickerState) {
@@ -155,7 +158,7 @@ fun MediaDetailsScreen(
     LaunchedEffect(uiState.downloadState) {
         when (val state = uiState.downloadState) {
             is DownloadState.Error -> snackbarHostState.showSnackbar(state.message)
-            is DownloadState.Success -> snackbarHostState.showSnackbar("Saved to gallery!")
+            is DownloadState.Success -> snackbarHostState.showSnackbar(savedToGalleryMessage)
             else -> Unit
         }
     }
@@ -168,7 +171,7 @@ fun MediaDetailsScreen(
                 TopAppBar(
                     title = {
                         Text(
-                            text = "Media Details",
+                            text = stringResource(UiR.string.media_details),
                             modifier = Modifier.testTag("media_details_title")
                         )
                     },
@@ -176,7 +179,7 @@ fun MediaDetailsScreen(
                         IconButton(onClick = onBackClick) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back"
+                                contentDescription = stringResource(UiR.string.back)
                             )
                         }
                     }
@@ -206,7 +209,7 @@ fun MediaDetailsScreen(
                     )
                     if (uiState.mediaType is com.gustavo.brilhante.cutestickers.model.MediaType.Animated) {
                         Text(
-                            text = "GIF",
+                            text = stringResource(UiR.string.gif),
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
                                 .padding(16.dp)
@@ -239,7 +242,7 @@ fun MediaDetailsScreen(
                                 color = MaterialTheme.colorScheme.onPrimary
                             )
                         } else {
-                            Text("Add to WhatsApp")
+                            Text(stringResource(UiR.string.add_to_whatsapp))
                         }
                     }
 
@@ -256,7 +259,7 @@ fun MediaDetailsScreen(
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Text("Download")
+                            Text(stringResource(UiR.string.download))
                         }
                     }
                 }
@@ -304,13 +307,13 @@ fun StickerPreviewContent(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            text = "My stickers",
+            text = stringResource(UiR.string.my_stickers),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
 
         Text(
-            text = "Tap to add this sticker to WhatsApp",
+            text = stringResource(UiR.string.tap_to_add_to_whatsapp),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -334,7 +337,7 @@ fun StickerPreviewContent(
             shape = RoundedCornerShape(12.dp)
         ) {
             Text(
-                text = "Add to WhatsApp",
+                text = stringResource(UiR.string.add_to_whatsapp),
                 modifier = Modifier.padding(vertical = 4.dp),
                 fontSize = 16.sp
             )
