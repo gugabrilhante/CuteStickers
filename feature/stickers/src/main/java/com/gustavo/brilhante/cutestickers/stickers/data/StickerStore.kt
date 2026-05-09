@@ -13,7 +13,8 @@ internal data class StickerPackInfo(
     val name: String,
     val publisher: String,
     @SerialName("tray_image_file") val trayImageFileName: String,
-    val stickers: List<StickerInfo>
+    val stickers: List<StickerInfo>,
+    val isAnimated: Boolean = false
 )
 
 @Serializable

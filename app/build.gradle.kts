@@ -69,6 +69,8 @@ dependencies {
     implementation(libs.androidx.animation)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.dagger.hilt.android)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
     ksp(libs.dagger.hilt.compiler)
 
     androidTestImplementation(platform(bom))

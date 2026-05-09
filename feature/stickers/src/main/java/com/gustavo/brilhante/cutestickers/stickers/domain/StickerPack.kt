@@ -5,7 +5,8 @@ data class StickerPack(
     val name: String,
     val publisher: String,
     val trayImageFileName: String,
-    val stickers: List<StickerItem>
+    val stickers: List<StickerItem>,
+    val isAnimated: Boolean = false
 )
 
 data class StickerItem(

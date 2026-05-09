@@ -10,7 +10,9 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
@@ -45,6 +47,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -186,20 +189,35 @@ fun MediaDetailsScreen(
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
             ) {
-                AsyncImage(
-                    model = uiState.imageUrl,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f)
-                        .sharedElement(
-                            rememberSharedContentState(key = "image-${uiState.mediaId}"),
-                            animatedVisibilityScope = animatedVisibilityScope
+                Box {
+                    AsyncImage(
+                        model = uiState.imageUrl,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f)
+                            .sharedElement(
+                                rememberSharedContentState(key = "image-${uiState.mediaId}"),
+                                animatedVisibilityScope = animatedVisibilityScope
+                            )
+                            .clip(RoundedCornerShape(0.dp))
+                            .testTag("hero_image"),
+                        contentScale = ContentScale.Crop
+                    )
+                    if (uiState.mediaType is com.gustavo.brilhante.cutestickers.model.MediaType.Animated) {
+                        Text(
+                            text = "GIF",
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(16.dp)
+                                .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold
                         )
-                        .clip(RoundedCornerShape(0.dp))
-                        .testTag("hero_image"),
-                    contentScale = ContentScale.Crop
-                )
+                    }
+                }
 
                 Row(
                     modifier = Modifier
@@ -249,7 +267,7 @@ fun MediaDetailsScreen(
                     onDismissRequest = onDismissStickerSheet,
                     sheetState = sheetState
                 ) {
-                    val pack = (uiState.stickerState as StickerState.Success).pack
+                    val pack = uiState.stickerState.pack
                     StickerPreviewContent(
                         pack = pack,
                         onConfirm = {
@@ -271,8 +289,10 @@ fun StickerPreviewContent(
     onConfirm: () -> Unit
 ) {
     val context = LocalContext.current
+    // For preview, we show only the LATEST sticker added to the pack
     val stickerFile = remember(pack) {
-        File(File(context.filesDir, "stickers/${pack.id}"), pack.stickers.first().imageFileName)
+        val lastStickerFileName = pack.stickers.last().imageFileName
+        File(File(context.filesDir, "stickers/${pack.id}"), lastStickerFileName)
     }
 
     Column(
@@ -301,7 +321,8 @@ fun StickerPreviewContent(
             contentDescription = null,
             modifier = Modifier
                 .size(120.dp)
-                .clip(RoundedCornerShape(8.dp)),
+                .clip(RoundedCornerShape(8.dp))
+                .testTag("sticker_preview_image"),
             contentScale = ContentScale.Fit
         )
 

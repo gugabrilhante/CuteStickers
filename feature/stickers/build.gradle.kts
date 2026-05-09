@@ -17,7 +17,7 @@ android {
 
     buildTypes {
         debug {
-            enableUnitTestCoverage = true
+            enableUnitTestCoverage = false
         }
     }
 
@@ -33,11 +33,13 @@ android {
 dependencies {
     implementation(project(":core:common"))
     implementation(project(":core:network"))
+    implementation(project(":core:model"))
 
     implementation(libs.dagger.hilt.android)
     ksp(libs.dagger.hilt.compiler)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.webp.android)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

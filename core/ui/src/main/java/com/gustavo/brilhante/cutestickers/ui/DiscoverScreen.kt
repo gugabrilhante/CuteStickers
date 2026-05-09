@@ -155,21 +155,36 @@ fun MediaCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         with(sharedTransitionScope) {
-            SubcomposeAsyncImage(
-                model = item.url,
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .sharedElement(
-                        rememberSharedContentState(key = "image-${item.id}"),
-                        animatedVisibilityScope = animatedVisibilityScope
+            Box {
+                SubcomposeAsyncImage(
+                    model = item.url,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .sharedElement(
+                            rememberSharedContentState(key = "image-${item.id}"),
+                            animatedVisibilityScope = animatedVisibilityScope
+                        )
+                        .clip(RoundedCornerShape(16.dp)),
+                    contentScale = ContentScale.Crop,
+                    loading = {
+                        ShimmerBox()
+                    }
+                )
+                if (item.type is com.gustavo.brilhante.cutestickers.model.MediaType.Animated) {
+                    Text(
+                        text = "GIF",
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                            .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                        color = Color.White,
+                        style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                     )
-                    .clip(RoundedCornerShape(16.dp)),
-                contentScale = ContentScale.Crop,
-                loading = {
-                    ShimmerBox()
                 }
-            )
+            }
         }
     }
 }

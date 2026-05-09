@@ -14,6 +14,8 @@ import com.gustavo.brilhante.cutestickers.mediadetails.MediaDetailsScreen
 import com.gustavo.brilhante.cutestickers.mediadetails.MediaDetailsUiState
 import com.gustavo.brilhante.cutestickers.mediadetails.StickerState
 import com.gustavo.brilhante.cutestickers.designsystem.theme.CuteStickersTheme
+import com.gustavo.brilhante.cutestickers.model.MediaType
+import androidx.compose.ui.test.onNodeWithText
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import org.junit.Rule
@@ -101,5 +103,66 @@ class MediaDetailsScreenTest {
         }
 
         composeTestRule.onNodeWithTag("download_button").assertIsEnabled()
+    }
+
+    @Test
+    fun mediaDetailsScreen_displaysGifBadge_whenMediaIsAnimated() {
+        composeTestRule.setContent {
+            CuteStickersTheme {
+                SharedTransitionLayout {
+                    AnimatedVisibility(visible = true) {
+                        MediaDetailsScreen(
+                            uiState = MediaDetailsUiState(
+                                imageUrl = "https://example.com/media.gif",
+                                mediaId = "123",
+                                mediaType = MediaType.Animated
+                            ),
+                            snackbarHostState = remember { SnackbarHostState() },
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            animatedVisibilityScope = this,
+                            onBackClick = {},
+                            onAddToWhatsApp = {},
+                            onDownload = {}
+                        )
+                    }
+                }
+            }
+        }
+
+        composeTestRule.onNodeWithText("GIF").assertIsDisplayed()
+    }
+
+    @Test
+    fun mediaDetailsScreen_showsStickerPreview_onSuccess() {
+        val pack = com.gustavo.brilhante.cutestickers.stickers.domain.StickerPack(
+            id = "1",
+            name = "Test Pack",
+            publisher = "Tester",
+            trayImageFileName = "tray.png",
+            stickers = listOf(com.gustavo.brilhante.cutestickers.stickers.domain.StickerItem("s1.webp", emptyList())),
+            isAnimated = true
+        )
+        composeTestRule.setContent {
+            CuteStickersTheme {
+                SharedTransitionLayout {
+                    AnimatedVisibility(visible = true) {
+                        MediaDetailsScreen(
+                            uiState = MediaDetailsUiState(
+                                stickerState = StickerState.Success(pack)
+                            ),
+                            snackbarHostState = remember { SnackbarHostState() },
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            animatedVisibilityScope = this,
+                            onBackClick = {},
+                            onAddToWhatsApp = {},
+                            onDownload = {}
+                        )
+                    }
+                }
+            }
+        }
+
+        composeTestRule.onNodeWithTag("sticker_preview_image").assertIsDisplayed()
+        composeTestRule.onNodeWithText("My stickers").assertIsDisplayed()
     }
 }
