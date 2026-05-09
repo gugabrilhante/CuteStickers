@@ -1,10 +1,8 @@
 package com.gustavo.brilhante.cutestickers.stickers.data
 
-import android.content.ClipData
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.util.Log
+import com.gustavo.brilhante.cutestickers.common.PackageManagerWrapper
+import com.gustavo.brilhante.cutestickers.stickers.domain.ExportMetadata
 import com.gustavo.brilhante.cutestickers.stickers.domain.StickerExporter
 import com.gustavo.brilhante.cutestickers.stickers.domain.StickerPack
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -13,74 +11,47 @@ import javax.inject.Singleton
 
 @Singleton
 internal class WhatsAppStickerExporter @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val packageManagerWrapper: PackageManagerWrapper,
+    private val stickerStore: StickerStore
 ) : StickerExporter {
 
     companion object {
-        private const val TAG = "Sticker - WhatsAppExporter"
         private const val WHATSAPP_PACKAGE = "com.whatsapp"
         private const val WHATSAPP_BUSINESS_PACKAGE = "com.whatsapp.w4b"
-        private const val ACTION_ENABLE_STICKER_PACK = "com.whatsapp.intent.action.ENABLE_STICKER_PACK"
     }
 
     override fun isWhatsAppInstalled(): Boolean =
-        isPackageInstalled(WHATSAPP_PACKAGE) || isPackageInstalled(WHATSAPP_BUSINESS_PACKAGE)
+        packageManagerWrapper.isPackageInstalled(WHATSAPP_PACKAGE) || 
+        packageManagerWrapper.isPackageInstalled(WHATSAPP_BUSINESS_PACKAGE)
 
-    override fun buildExportIntent(pack: StickerPack): Result<Intent> = runCatching {
-        // Resolve which WhatsApp variant is installed. setPackage() is required —
-        // without it, Android may not route an implicit intent to WhatsApp at all.
+    override fun getExportMetadata(pack: StickerPack): Result<ExportMetadata> = runCatching {
         val targetPackage = when {
-            isPackageInstalled(WHATSAPP_PACKAGE) -> WHATSAPP_PACKAGE
-            isPackageInstalled(WHATSAPP_BUSINESS_PACKAGE) -> WHATSAPP_BUSINESS_PACKAGE
-            else -> error("WhatsApp is not installed on this device")
+            packageManagerWrapper.isPackageInstalled(WHATSAPP_PACKAGE) -> WHATSAPP_PACKAGE
+            packageManagerWrapper.isPackageInstalled(WHATSAPP_BUSINESS_PACKAGE) -> WHATSAPP_BUSINESS_PACKAGE
+            else -> error("WhatsApp is not installed")
         }
 
-        // Validate that all sticker files actually exist on disk before launching WhatsApp.
-        // WhatsApp queries the ContentProvider synchronously during the import flow — missing
-        // files cause a silent failure (no popup, no error message).
         validatePackFiles(pack)
 
-        val authority = "${context.packageName}.StickerContentProvider"
-        val metadataUri = Uri.parse("content://$authority/metadata/${pack.id}")
-
-        val intent = Intent(ACTION_ENABLE_STICKER_PACK).apply {
-            setPackage(targetPackage)
-            putExtra("sticker_pack_id", pack.id)
-            putExtra("sticker_pack_authority", authority)
-            putExtra("sticker_pack_name", pack.name)
-            putExtra("sticker_pack_publisher", pack.publisher)
-            putExtra("sticker_pack_tray_image_file_name", pack.trayImageFileName)
-            putExtra("is_animated_sticker_pack", pack.isAnimated)
-
-            clipData = ClipData.newRawUri("", metadataUri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-
-        context.grantUriPermission(
-            targetPackage,
-            metadataUri,
-            Intent.FLAG_GRANT_READ_URI_PERMISSION
+        ExportMetadata(
+            packId = pack.id,
+            authority = "${context.packageName}.StickerContentProvider",
+            packName = pack.name,
+            publisher = pack.publisher,
+            trayImageFileName = pack.trayImageFileName,
+            isAnimated = pack.isAnimated,
+            targetPackage = targetPackage
         )
-
-        intent
     }
 
     private fun validatePackFiles(pack: StickerPack) {
-        val store = StickerStore(context)
-
-        val trayFile = store.getStickerFile(pack.id, pack.trayImageFileName)
-        if (!trayFile.exists()) error("Tray icon not found on disk: ${trayFile.absolutePath}")
+        val trayFile = stickerStore.getStickerFile(pack.id, pack.trayImageFileName)
+        if (!trayFile.exists()) error("Tray icon missing")
 
         pack.stickers.forEach { sticker ->
-            val file = store.getStickerFile(pack.id, sticker.imageFileName)
-            if (!file.exists()) error("Sticker file missing: ${file.absolutePath}")
-            if (file.length() == 0L) error("Sticker file is empty: ${file.absolutePath}")
+            val file = stickerStore.getStickerFile(pack.id, sticker.imageFileName)
+            if (!file.exists() || file.length() == 0L) error("Sticker file missing or empty: ${sticker.imageFileName}")
         }
     }
-
-    private fun isPackageInstalled(packageName: String): Boolean = runCatching {
-        @Suppress("DEPRECATION")
-        context.packageManager.getPackageInfo(packageName, 0)
-        true
-    }.getOrDefault(false)
 }

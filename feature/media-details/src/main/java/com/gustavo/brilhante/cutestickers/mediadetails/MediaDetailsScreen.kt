@@ -107,9 +107,9 @@ fun MediaDetailsRoute(
     }
 
     val onDownloadClick = {
-        val needsPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+        val needsPermission = (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
-            PackageManager.PERMISSION_GRANTED
+            PackageManager.PERMISSION_GRANTED)
         if (needsPermission) {
             downloadPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
         } else {
@@ -126,7 +126,7 @@ fun MediaDetailsRoute(
         onAddToWhatsApp = viewModel::onAddToWhatsApp,
         onDownload = onDownloadClick,
         onConfirmExport = viewModel::onConfirmExport,
-        onDismissStickerSheet = viewModel::DismissStickerSheet
+        onDismissStickerSheet = viewModel::dismissStickerSheet
     )
 }
 
@@ -172,7 +172,7 @@ fun MediaDetailsScreen(
                     title = {
                         Text(
                             text = stringResource(UiR.string.media_details),
-                            modifier = Modifier.testTag("media_details_title")
+                            modifier = Modifier.testTag("media_details_title"),
                         )
                     },
                     navigationIcon = {

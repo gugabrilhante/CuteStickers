@@ -165,4 +165,29 @@ class MediaDetailsScreenTest {
         composeTestRule.onNodeWithTag("sticker_preview_image").assertIsDisplayed()
         composeTestRule.onNodeWithText("My stickers").assertIsDisplayed()
     }
+
+    @Test
+    fun mediaDetailsScreen_displaysErrorSnackbar_onDownloadFailure() {
+        composeTestRule.setContent {
+            CuteStickersTheme {
+                SharedTransitionLayout {
+                    AnimatedVisibility(visible = true) {
+                        MediaDetailsScreen(
+                            uiState = MediaDetailsUiState(
+                                downloadState = DownloadState.Error("Network Error")
+                            ),
+                            snackbarHostState = remember { SnackbarHostState() },
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            animatedVisibilityScope = this,
+                            onBackClick = {},
+                            onAddToWhatsApp = {},
+                            onDownload = {}
+                        )
+                    }
+                }
+            }
+        }
+
+        composeTestRule.onNodeWithText("Network Error").assertIsDisplayed()
+    }
 }
