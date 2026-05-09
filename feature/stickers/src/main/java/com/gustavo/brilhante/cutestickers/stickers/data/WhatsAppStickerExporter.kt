@@ -50,6 +50,7 @@ internal class WhatsAppStickerExporter @Inject constructor(
             putExtra("sticker_pack_name", pack.name)
             putExtra("sticker_pack_publisher", pack.publisher)
             putExtra("sticker_pack_tray_image_file_name", pack.trayImageFileName)
+            putExtra("is_animated_sticker_pack", pack.isAnimated)
 
             clipData = ClipData.newRawUri("", metadataUri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)

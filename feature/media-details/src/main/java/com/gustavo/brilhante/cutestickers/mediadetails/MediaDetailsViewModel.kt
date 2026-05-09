@@ -7,6 +7,7 @@ import com.gustavo.brilhante.cutestickers.stickers.domain.CreateStickerUseCase
 import com.gustavo.brilhante.cutestickers.stickers.domain.ExportStickerPackUseCase
 import com.gustavo.brilhante.cutestickers.stickers.domain.SaveMediaUseCase
 import com.gustavo.brilhante.cutestickers.stickers.domain.StickerPack
+import com.gustavo.brilhante.cutestickers.model.MediaType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +34,7 @@ sealed interface DownloadState {
 data class MediaDetailsUiState(
     val imageUrl: String = "",
     val mediaId: String = "",
+    val mediaType: MediaType = MediaType.Static,
     val stickerState: StickerState = StickerState.Idle,
     val downloadState: DownloadState = DownloadState.Idle
 )
@@ -55,7 +57,8 @@ class MediaDetailsViewModel @Inject constructor(
     val events = _events.receiveAsFlow()
 
     fun init(imageUrl: String, mediaId: String) {
-        _uiState.update { it.copy(imageUrl = imageUrl, mediaId = mediaId) }
+        val type = if (imageUrl.lowercase().contains("gif")) MediaType.Animated else MediaType.Static
+        _uiState.update { it.copy(imageUrl = imageUrl, mediaId = mediaId, mediaType = type) }
     }
 
     fun onAddToWhatsApp() {
@@ -63,7 +66,7 @@ class MediaDetailsViewModel @Inject constructor(
         if (state.stickerState is StickerState.Loading) return
         _uiState.update { it.copy(stickerState = StickerState.Loading) }
         viewModelScope.launch {
-            createStickerUseCase(state.imageUrl, state.mediaId)
+            createStickerUseCase(state.imageUrl, state.mediaId, state.mediaType)
                 .onSuccess { pack ->
                     _uiState.update { it.copy(stickerState = StickerState.Success(pack)) }
                 }

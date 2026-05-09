@@ -133,7 +133,15 @@ class StickerContentProvider : ContentProvider() {
             METADATA_ALL -> "vnd.android.cursor.dir/vnd.$authority.metadata"
             METADATA_PACK -> "vnd.android.cursor.item/vnd.$authority.metadata"
             STICKERS -> "vnd.android.cursor.dir/vnd.$authority.stickers"
-            STICKERS_ASSET -> "image/webp"
+            STICKERS_ASSET -> {
+                val segments = uri.pathSegments
+                if (segments.size == 3) {
+                    val fileName = segments[2].lowercase()
+                    if (fileName.endsWith(".png")) return "image/png"
+                    if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) return "image/jpeg"
+                }
+                "image/webp"
+            }
             else -> throw IllegalArgumentException("Unknown URI: $uri")
         }
     }
@@ -155,7 +163,7 @@ class StickerContentProvider : ContentProvider() {
                 "", // sticker_pack_license_agreenment_website
                 store.getPackVersion(pack.id), // image_data_version
                 1, // avoid_cache
-                0  // animated_sticker_pack
+                if (pack.isAnimated) 1 else 0  // animated_sticker_pack
             )
             cursor.addRow(row)
         }

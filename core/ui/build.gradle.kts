@@ -42,4 +42,11 @@ dependencies {
     implementation(libs.androidx.animation)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
+
+    androidTestImplementation(platform(bom))
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.ui.test.junit4)
+    androidTestImplementation(libs.junit)
+    debugImplementation(libs.androidx.ui.test.manifest)
 }
