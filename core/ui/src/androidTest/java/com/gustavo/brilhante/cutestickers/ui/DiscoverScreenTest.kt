@@ -21,8 +21,8 @@ class DiscoverScreenTest {
     @Test
     fun discoverScreen_displaysGifBadge_forAnimatedItems() {
         val items = listOf(
-            MediaItem(id = "1", url = "https://example.com/image.jpg"),
-            MediaItem(id = "2", url = "https://example.com/anim.gif", type = MediaType.Animated)
+            MediaItem(id = "1", url = ""),
+            MediaItem(id = "2", url = "", type = MediaType.Animated)
         )
         val uiState = DiscoverUiState.Success(items = items)
 
