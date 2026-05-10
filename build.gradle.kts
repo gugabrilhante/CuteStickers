@@ -62,7 +62,6 @@ tasks.register<JacocoReport>("jacocoTestReport") {
             it.name == "compileDebugKotlin" ||
             it.name == "compileKotlin" ||
             it.name == "testDebugUnitTest" ||
-            it.name == "connectedDebugAndroidTest" ||
             it.name == "test"
         })
     }

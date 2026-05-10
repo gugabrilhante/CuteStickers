@@ -69,7 +69,7 @@ class MediaDetailsViewModelTest {
     @Test
     fun onAddToWhatsAppUpdatesStateToSuccess() = runTest(testDispatcher) {
         val pack = StickerPack("id", "name", "pub", "tray", emptyList(), false)
-        coEvery { createStickerUseCase(any(), any(), any()) } returns Result.success(pack)
+        coEvery { createStickerUseCase(any(), any(), any(), any()) } returns Result.success(pack)
         
         viewModel.init("url", "id")
         viewModel.onAddToWhatsApp()
