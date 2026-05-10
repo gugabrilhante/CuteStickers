@@ -29,34 +29,52 @@ internal class StickerRepositoryImpl @Inject constructor(
     override suspend fun createStickerFromUrl(
         imageUrl: String,
         mediaId: String,
-        mediaType: MediaType
+        mediaType: MediaType,
+        isCropped: Boolean
     ): Result<StickerPack> = withContext(ioDispatcher) {
         runCatching {
             val isAnimated = mediaType is MediaType.Animated
-            val packId = if (isAnimated) "cute_stickers_animated" else "cute_stickers_static"
-            val packName = if (isAnimated) "Cute Animated Stickers" else "Cute Stickers"
+            val packId = if (isAnimated) "anim_pack" else "static_pack"
+            val packName = if (isAnimated) "Cute Animated" else "Cute Static"
 
             val stickerFileName = "${mediaId}.webp"
             val primaryFile = File(fileManager.packDir(packId), stickerFileName)
             
             if (isAnimated) {
-                imageProcessor.downloadAndProcessAnimated(imageUrl, primaryFile)
+                imageProcessor.downloadAndProcessAnimated(imageUrl, primaryFile, isCropped)
                     .getOrThrow()
             } else {
-                imageProcessor.downloadAndProcess(imageUrl, primaryFile, ImageProcessor.STICKER_SIZE)
+                imageProcessor.downloadAndProcess(imageUrl, primaryFile, ImageProcessor.STICKER_SIZE, isCropped)
                     .getOrThrow()
             }
 
-            val trayFile = File(fileManager.packDir(packId), "tray_icon.png")
-            imageProcessor.downloadAndProcess(imageUrl, trayFile, ImageProcessor.TRAY_SIZE)
+            val trayFile = File(fileManager.packDir(packId), "tray_icon.webp")
+            imageProcessor.downloadAndProcess(imageUrl, trayFile, ImageProcessor.TRAY_SIZE, isCropped)
                 .getOrThrow()
 
             val existingPack = stickerStore.loadAllPacks().find { it.id == packId }
             val existingStickers = existingPack?.stickers ?: emptyList()
             
             val newStickerInfo = StickerInfo(imageFileName = stickerFileName)
-            val updatedStickers = (existingStickers.filter { it.imageFileName != stickerFileName } + newStickerInfo)
-                .takeLast(30)
+            var updatedStickers = (existingStickers.filter { 
+                !it.imageFileName.startsWith("placeholder_") && it.imageFileName != stickerFileName 
+            } + newStickerInfo).takeLast(30)
+
+            // WhatsApp REQUIRES at least 3 stickers in a pack to be valid.
+            // If we have fewer, we duplicate the file to meet the requirement.
+            if (updatedStickers.isNotEmpty() && updatedStickers.size < 3) {
+                val lastInfo = updatedStickers.last()
+                val lastFile = File(fileManager.packDir(packId), lastInfo.imageFileName)
+                
+                val placeholders = mutableListOf<StickerInfo>()
+                for (i in 1..(3 - updatedStickers.size)) {
+                    val placeholderFileName = "placeholder_${i}.webp"
+                    val placeholderFile = File(fileManager.packDir(packId), placeholderFileName)
+                    lastFile.copyTo(placeholderFile, overwrite = true)
+                    placeholders.add(StickerInfo(imageFileName = placeholderFileName))
+                }
+                updatedStickers = updatedStickers + placeholders
+            }
 
             val packInfo = StickerPackInfo(
                 id = packId,
@@ -64,7 +82,8 @@ internal class StickerRepositoryImpl @Inject constructor(
                 publisher = "CuteStickers",
                 trayImageFileName = trayFile.name,
                 stickers = updatedStickers,
-                isAnimated = isAnimated
+                isAnimated = isAnimated,
+                version = timeProvider.getCurrentTimeMillis().toString()
             )
             stickerStore.savePack(packInfo)
 

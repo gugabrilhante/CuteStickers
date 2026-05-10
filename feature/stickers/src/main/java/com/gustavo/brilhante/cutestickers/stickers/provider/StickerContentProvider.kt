@@ -68,7 +68,9 @@ class StickerContentProvider : ContentProvider() {
         )
     }
 
-    private val authority: String by lazy { "${context!!.packageName}.StickerContentProvider" }
+    private val authority: String by lazy { 
+        context?.packageName?.let { "$it.StickerContentProvider" } ?: "com.gustavo.brilhante.cutestickers.StickerContentProvider"
+    }
 
     private val uriMatcher: UriMatcher by lazy {
         UriMatcher(UriMatcher.NO_MATCH).apply {
@@ -89,64 +91,64 @@ class StickerContentProvider : ContentProvider() {
         sortOrder: String?
     ): Cursor? {
         val match = uriMatcher.match(uri)
+        android.util.Log.d("StickerProvider", "Query URI: $uri | Match: $match")
         val store = stickerStore
         return when (match) {
             METADATA_ALL -> {
                 val packs = store.loadAllPacks()
+                android.util.Log.d("StickerProvider", "Packs found: ${packs.size}")
                 buildPacksCursor(packs)
             }
             METADATA_PACK -> {
                 val packId = uri.lastPathSegment
                 val packs = store.loadAllPacks()
                 val pack = packs.find { it.id == packId }
+                android.util.Log.d("StickerProvider", "Pack ID $packId found: ${pack != null}")
                 buildPacksCursor(if (pack != null) listOf(pack) else emptyList())
             }
             STICKERS -> {
                 val packId = uri.lastPathSegment ?: return null
                 val stickers = store.loadStickers(packId)
+                android.util.Log.d("StickerProvider", "Stickers for $packId: ${stickers.size}")
                 buildStickersCursor(stickers)
             }
-            else -> null
+            else -> {
+                android.util.Log.e("StickerProvider", "No match for URI: $uri")
+                null
+            }
         }
     }
 
     override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor {
+        android.util.Log.d("StickerProvider", "OpenFile URI: $uri | Mode: $mode")
         if (mode != "r") throw SecurityException("Only read-only mode is supported")
         
         val match = uriMatcher.match(uri)
-        if (match != STICKERS_ASSET) throw FileNotFoundException("Unrecognised URI: $uri")
+        if (match != STICKERS_ASSET) {
+            android.util.Log.e("StickerProvider", "OpenFile match failed: $match")
+            throw FileNotFoundException("Unrecognised URI: $uri")
+        }
         
         val segments = uri.pathSegments
         if (segments.size != 3) throw FileNotFoundException("Expected 3 path segments: $uri")
         
         val packId = segments[1]
         val fileName = segments[2]
-
-        // Sanitize path segments to prevent path traversal
-        if (packId.isBlank() || packId.contains("..") || packId.contains("/") || packId.contains("\\")) {
-            throw IllegalArgumentException("Invalid packId")
-        }
-        if (fileName.isBlank() || fileName.contains("..") || fileName.contains("/") || fileName.contains("\\")) {
-            throw IllegalArgumentException("Invalid fileName")
-        }
-
         val store = stickerStore
         val file = store.getStickerFile(packId, fileName)
         
-        // Verify canonical path stays under the stickers root
-        val rootPath = store.stickersRoot.canonicalPath
-        if (!file.canonicalPath.startsWith(rootPath)) {
-            throw SecurityException("Path traversal attempt detected")
+        if (!file.exists()) {
+            android.util.Log.e("StickerProvider", "File not found: ${file.absolutePath}")
+            throw FileNotFoundException("Sticker not found: $packId/$fileName")
         }
-
-        if (!file.exists()) throw FileNotFoundException("Sticker not found: $packId/$fileName")
         
+        android.util.Log.d("StickerProvider", "Serving file: ${file.name} (${file.length()} bytes)")
         return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
     }
 
     override fun getType(uri: Uri): String {
         val match = uriMatcher.match(uri)
-        return when (match) {
+        val type = when (match) {
             METADATA_ALL -> "vnd.android.cursor.dir/vnd.$authority.metadata"
             METADATA_PACK -> "vnd.android.cursor.item/vnd.$authority.metadata"
             STICKERS -> "vnd.android.cursor.dir/vnd.$authority.stickers"
@@ -154,18 +156,19 @@ class StickerContentProvider : ContentProvider() {
                 val segments = uri.pathSegments
                 if (segments.size == 3) {
                     val fileName = segments[2].lowercase()
-                    if (fileName.endsWith(".png")) return "image/png"
-                    if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) return "image/jpeg"
-                }
-                "image/webp"
+                    if (fileName.endsWith(".png")) "image/png"
+                    else if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) "image/jpeg"
+                    else "image/webp"
+                } else "image/webp"
             }
-            else -> throw IllegalArgumentException("Unknown URI: $uri")
+            else -> "image/webp"
         }
+        android.util.Log.d("StickerProvider", "GetType URI: $uri | Result: $type")
+        return type
     }
 
     private fun buildPacksCursor(packs: List<StickerPackInfo>): Cursor {
         val cursor = MatrixCursor(PACK_COLUMNS)
-        val store = stickerStore
         packs.forEach { pack ->
             val row = arrayOf<Any?>(
                 pack.id,
@@ -178,7 +181,7 @@ class StickerContentProvider : ContentProvider() {
                 "", // sticker_pack_publisher_website
                 "", // sticker_pack_privacy_policy_website
                 "", // sticker_pack_license_agreenment_website
-                store.getPackVersion(pack.id), // image_data_version
+                pack.version, // image_data_version
                 1, // avoid_cache
                 if (pack.isAnimated) 1 else 0  // animated_sticker_pack
             )
