@@ -2,6 +2,7 @@ codecov:
   branch: master
   notify:
     require_ci_to_pass: yes
+    after_n_builds: 2
 
 coverage:
   status:
@@ -16,6 +17,16 @@ coverage:
         target: 60%
         threshold: 5%
         informational: false
+
+flags:
+  unittests:
+    paths:
+      - . # All paths
+    carryforward: true
+  uitests:
+    paths:
+      - . # All paths
+    carryforward: true
 
 comment:
   layout: "reach,diff,flags,tree"

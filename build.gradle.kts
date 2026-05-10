@@ -56,17 +56,6 @@ tasks.register<JacocoReport>("jacocoTestReport") {
     group = "verification"
     description = "Generates aggregated JaCoCo coverage report for all modules."
 
-    // Wait for every module's unit-test task before generating the report.
-    dependsOn(
-        subprojects.map { proj ->
-            proj.tasks.matching { t ->
-                (t.name == "testDebugUnitTest") ||
-                (t.name == "connectedDebugAndroidTest" && proj.file("src/androidTest").exists()) ||
-                (t.name == "test" && !proj.plugins.hasPlugin("com.android.base"))
-            }
-        }
-    )
-
     reports {
         xml.required.set(true)
         xml.outputLocation.set(
