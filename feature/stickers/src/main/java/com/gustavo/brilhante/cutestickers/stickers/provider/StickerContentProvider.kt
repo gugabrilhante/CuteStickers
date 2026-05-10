@@ -134,8 +134,29 @@ class StickerContentProvider : ContentProvider() {
         
         val packId = segments[1]
         val fileName = segments[2]
+
+        // Validation: reject any path segment (both packId and fileName) that contains "/", "\","..", or null bytes
+        val invalidChars = listOf("/", "\\", "..", "\u0000")
+        if (invalidChars.any { packId.contains(it) } || invalidChars.any { fileName.contains(it) }) {
+            android.util.Log.e("StickerProvider", "Invalid path segment: packId=$packId, fileName=$fileName")
+            throw SecurityException("Invalid path segment")
+        }
+
         val store = stickerStore
         val file = store.getStickerFile(packId, fileName)
+
+        // Resolve the resulting File to its canonical path and ensure it is a descendant of stickersRoot before opening
+        try {
+            val canonicalFile = file.canonicalFile
+            val canonicalRoot = store.stickersRoot.canonicalFile
+            if (!canonicalFile.path.startsWith(canonicalRoot.path)) {
+                android.util.Log.e("StickerProvider", "Path traversal attempt: ${canonicalFile.path} is not under ${canonicalRoot.path}")
+                throw SecurityException("Access denied")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("StickerProvider", "Error validating file path", e)
+            throw FileNotFoundException("Invalid file path")
+        }
         
         if (!file.exists()) {
             android.util.Log.e("StickerProvider", "File not found: ${file.absolutePath}")

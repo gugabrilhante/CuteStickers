@@ -13,7 +13,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-internal class ImageProcessor @Inject constructor(
+internal open class ImageProcessor @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val downloader: StickerDownloader,
     private val logger: Logger
@@ -35,7 +35,7 @@ internal class ImageProcessor @Inject constructor(
         val dropFramesRatio: Int = 1
     )
 
-    private data class Frame(val bitmap: Bitmap, val durationMs: Int)
+    internal data class Frame(val bitmap: Bitmap, val durationMs: Int)
 
     private val compressionPipeline = listOf(
         CompressionConfig(1, 512, 90),
@@ -47,6 +47,9 @@ internal class ImageProcessor @Inject constructor(
         CompressionConfig(7, 512, 30),
         CompressionConfig(8, 512, 30, dropFramesRatio = 2)
     )
+
+    internal open fun createEncoder(width: Int, height: Int) = 
+        com.aureusapps.android.webpandroid.encoder.WebPAnimEncoder(context, width, height)
 
     fun downloadAndProcess(
         imageUrl: String,
@@ -102,7 +105,7 @@ internal class ImageProcessor @Inject constructor(
         }
 
         tempInput.delete()
-        finalResult ?: error("Failed to compress animated sticker below 500KB")
+        finalResult ?: error("Failed to compress animated sticker below ${ANIMATED_STICKER_MAX_BYTES / 1024}KB")
     }
 
     private fun encodeAnimatedWebP(inputFile: File, config: CompressionConfig, isCropped: Boolean): File {
@@ -111,11 +114,7 @@ internal class ImageProcessor @Inject constructor(
         val processedFrames = processFrames(frames, config)
         
         try {
-            val encoder = com.aureusapps.android.webpandroid.encoder.WebPAnimEncoder(
-                context,
-                config.scale, 
-                config.scale
-            )
+            val encoder = createEncoder(config.scale, config.scale)
             
             val webPConfig = com.aureusapps.android.webpandroid.encoder.WebPConfig(
                 quality = config.quality.toFloat()
@@ -148,7 +147,7 @@ internal class ImageProcessor @Inject constructor(
         return tempOutput
     }
 
-    private fun decodeFrames(file: File): List<Frame> {
+    internal fun decodeFrames(file: File): List<Frame> {
         val frames = mutableListOf<Frame>()
         try {
             val bytes = file.readBytes()
@@ -263,7 +262,7 @@ internal class ImageProcessor @Inject constructor(
         
         val cropped = Bitmap.createBitmap(source, left, top, minEdge, minEdge)
         val scaled = Bitmap.createScaledBitmap(cropped, targetSize, targetSize, true)
-        if (cropped != source) cropped.recycle()
+        if (cropped != source && cropped != scaled) cropped.recycle()
         return scaled
     }
 
@@ -275,7 +274,7 @@ internal class ImageProcessor @Inject constructor(
         val scaledH = (source.height * scale).toInt()
         val scaled = Bitmap.createScaledBitmap(source, scaledW, scaledH, true)
         canvas.drawBitmap(scaled, (targetSize - scaledW) / 2f, (targetSize - scaledH) / 2f, Paint(Paint.ANTI_ALIAS_FLAG))
-        scaled.recycle()
+        if (scaled != source) scaled.recycle()
         return result
     }
 

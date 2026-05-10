@@ -12,10 +12,15 @@ import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.Rule
+import org.junit.rules.TemporaryFolder
 import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class StickerRepositoryImplTest {
+
+    @get:Rule
+    val tempFolder = TemporaryFolder()
 
     private val imageProcessor = mockk<ImageProcessor>()
     private val fileManager = mockk<StickerFileManager>()
@@ -41,22 +46,27 @@ class StickerRepositoryImplTest {
         val imageUrl = "https://example.com/image.webp"
         val mediaId = "123"
         val mediaType = MediaType.Static
-        val packId = "cute_stickers_static"
-        val packDir = File("mockDir")
-        val mockFile = File("mockFile")
+        val packId = "static_pack"
+        val packDir = tempFolder.newFolder(packId)
+        val mockFile = File(packDir, "mockFile.webp").apply { createNewFile() }
         
-        every { fileManager.packDir(packId) } returns packDir
-        coEvery { imageProcessor.downloadAndProcess(any(), any(), any()) } returns Result.success(mockFile)
+        every { fileManager.packDir(any()) } returns packDir
+        every { imageProcessor.downloadAndProcess(any(), any(), any(), any()) } answers {
+            val file = it.invocation.args[1] as File
+            file.createNewFile()
+            Result.success(file)
+        }
         every { stickerStore.loadAllPacks() } returns emptyList()
         every { stickerStore.savePack(any()) } returns Unit
+        every { timeProvider.getCurrentTimeMillis() } returns 123456789L
 
         // Act
         val result = repository.createStickerFromUrl(imageUrl, mediaId, mediaType)
 
         // Assert
-        assertTrue(result.isSuccess)
-        coVerify { imageProcessor.downloadAndProcess(imageUrl, any(), ImageProcessor.STICKER_SIZE) }
-        coVerify { imageProcessor.downloadAndProcess(imageUrl, any(), ImageProcessor.TRAY_SIZE) }
+        assertTrue("Result should be success but was ${result.exceptionOrNull()}", result.isSuccess)
+        coVerify { imageProcessor.downloadAndProcess(imageUrl, any(), ImageProcessor.STICKER_SIZE, any()) }
+        coVerify { imageProcessor.downloadAndProcess(imageUrl, any(), ImageProcessor.TRAY_SIZE, any()) }
         coVerify { stickerStore.savePack(match { it.id == packId }) }
     }
 

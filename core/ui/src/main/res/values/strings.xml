@@ -17,4 +17,5 @@
     <string name="my_stickers">My stickers</string>
     <string name="tap_to_add_to_whatsapp">Tap to add this sticker to WhatsApp</string>
     <string name="saved_to_gallery">Saved to gallery!</string>
+    <string name="crop">Crop</string>
 </resources>

@@ -4,6 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import android.util.Log
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -41,6 +42,36 @@ internal class StickerStoreImpl @Inject constructor(
 
     companion object {
         private val json = Json { ignoreUnknownKeys = true }
+    }
+
+    init {
+        migrateOldPacks()
+    }
+
+    private fun migrateOldPacks() {
+        val files = stickersRoot.listFiles() ?: return
+        val oldPacks = files.filter {
+            it.isDirectory && it.name != "anim_pack" && it.name != "static_pack"
+        }
+
+        for (oldPackDir in oldPacks) {
+            val packInfo = loadPackFromDir(oldPackDir) ?: continue
+            val newId = if (packInfo.isAnimated) "anim_pack" else "static_pack"
+            val newPackDir = File(stickersRoot, newId)
+
+            if (!newPackDir.exists()) {
+                if (oldPackDir.renameTo(newPackDir)) {
+                    val updatedPackInfo = packInfo.copy(id = newId)
+                    try {
+                        File(newPackDir, "pack_info.json").writeText(json.encodeToString(updatedPackInfo))
+                        Log.d("StickerStore", "Migrated pack from ${oldPackDir.name} to $newId")
+                    } catch (e: Exception) {
+                    }
+                }
+            } else {
+                oldPackDir.deleteRecursively()
+            }
+        }
     }
 
     override fun getPackVersion(packId: String): String {

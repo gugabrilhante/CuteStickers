@@ -222,7 +222,7 @@ fun MediaDetailsScreen(
                         FilterChip(
                             selected = uiState.isCropped,
                             onClick = onToggleCrop,
-                            label = { Text("Crop") },
+                            label = { Text(stringResource(UiR.string.crop)) },
                             colors = FilterChipDefaults.filterChipColors(
                                 containerColor = Color.Black.copy(alpha = 0.4f),
                                 labelColor = Color.White,

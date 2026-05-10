@@ -14,10 +14,15 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.Rule
+import org.junit.rules.TemporaryFolder
 import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class StickerIntegrationTest {
+
+    @get:Rule
+    val tempFolder = TemporaryFolder()
 
     private val imageProcessor = mockk<ImageProcessor>()
     private val fileManager = mockk<StickerFileManager>()
@@ -47,20 +52,27 @@ internal class StickerIntegrationTest {
         // Arrange
         val imageUrl = "https://example.com/cat.jpg"
         val mediaId = "cat123"
-        val packId = "cute_stickers_static"
+        val packId = "static_pack"
+        val packDir = tempFolder.newFolder(packId)
         
-        every { fileManager.packDir(packId) } returns File("mock")
-        coEvery { imageProcessor.downloadAndProcess(any(), any(), any()) } returns Result.success(File("mock"))
+        every { fileManager.packDir(any()) } returns packDir
+        every { imageProcessor.downloadAndProcess(any(), any(), any(), any()) } answers {
+            val file = it.invocation.args[1] as File
+            file.createNewFile()
+            Result.success(file)
+        }
+        every { timeProvider.getCurrentTimeMillis() } returns 123456789L
 
         // Act
         val result = repository.createStickerFromUrl(imageUrl, mediaId, MediaType.Static)
 
         // Assert
-        assertTrue(result.isSuccess)
+        assertTrue("Result should be success but was ${result.exceptionOrNull()}", result.isSuccess)
         val packs = stickerStore.loadAllPacks()
         assertEquals(1, packs.size)
         assertEquals(packId, packs[0].id)
-        assertEquals(1, packs[0].stickers.size)
+        // WhatsApp requirement adds placeholders if < 3
+        assertEquals(3, packs[0].stickers.size)
         assertEquals("${mediaId}.webp", packs[0].stickers[0].imageFileName)
     }
 

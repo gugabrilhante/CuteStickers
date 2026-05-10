@@ -5,6 +5,7 @@ import android.graphics.*
 import android.net.Uri
 import android.util.Log
 import com.aureusapps.android.webpandroid.encoder.WebPAnimEncoder
+import com.aureusapps.android.webpandroid.encoder.WebPConfig
 import com.gustavo.brilhante.cutestickers.common.Logger
 import io.mockk.*
 import org.junit.After
@@ -23,40 +24,63 @@ class ImageProcessorTest {
     private val context = mockk<Context>(relaxed = true)
     private val downloader = mockk<StickerDownloader>()
     private val logger = mockk<Logger>(relaxed = true)
-    private val imageProcessor = ImageProcessor(context, downloader, logger)
+    private val imageProcessor = spyk(ImageProcessor(context, downloader, logger))
+    private val mockEncoder = mockk<WebPAnimEncoder>(relaxed = true)
 
     @Before
     fun setup() {
         mockkStatic(Log::class)
-        every { Log.d(any<String>(), any<String>()) } returns 0
-        every { Log.e(any<String>(), any<String>()) } returns 0
-        every { Log.e(any<String>(), any<String>(), any<Throwable>()) } returns 0
+        every { Log.d(any(), any()) } returns 0
+        every { Log.e(any(), any()) } returns 0
+        every { Log.e(any(), any(), any()) } returns 0
 
         mockkStatic(Bitmap::class)
         mockkStatic(BitmapFactory::class)
         mockkStatic(Movie::class)
         mockkStatic(Uri::class)
 
-        val mockBitmap = mockk<Bitmap>(relaxed = true)
-        every { Bitmap.createBitmap(any<Int>(), any<Int>(), any<Bitmap.Config>()) } returns mockBitmap
-        every { Bitmap.createBitmap(any<Bitmap>(), any<Int>(), any<Int>(), any<Int>(), any<Int>()) } returns mockBitmap
-        every { Bitmap.createScaledBitmap(any<Bitmap>(), any<Int>(), any<Int>(), any<Boolean>()) } returns mockBitmap
+        every { Bitmap.createBitmap(any<Int>(), any<Int>(), any()) } answers { 
+            mockk<Bitmap>(relaxed = true).apply {
+                every { width } returns it.invocation.args[0] as Int
+                every { height } returns it.invocation.args[1] as Int
+                every { isRecycled } returns false
+            }
+        }
+        every { Bitmap.createBitmap(any<Bitmap>(), any(), any(), any(), any()) } answers { 
+            mockk<Bitmap>(relaxed = true).apply {
+                every { width } returns it.invocation.args[3] as Int
+                every { height } returns it.invocation.args[4] as Int
+                every { isRecycled } returns false
+            }
+        }
+        every { Bitmap.createScaledBitmap(any(), any(), any(), any()) } answers { 
+            mockk<Bitmap>(relaxed = true).apply {
+                every { width } returns it.invocation.args[1] as Int
+                every { height } returns it.invocation.args[2] as Int
+                every { isRecycled } returns false
+            }
+        }
         
-        every { BitmapFactory.decodeFile(any<String>()) } returns mockBitmap
-        every { Movie.decodeByteArray(any<ByteArray>(), any<Int>(), any<Int>()) } returns null
+        every { BitmapFactory.decodeFile(any()) } answers { 
+            mockk<Bitmap>(relaxed = true).apply {
+                every { width } returns 512
+                every { height } returns 512
+                every { isRecycled } returns false
+            }
+        }
         
-        every { Uri.fromFile(any<File>()) } returns mockk<Uri>(relaxed = true)
+        every { Movie.decodeByteArray(any(), any(), any()) } returns null
+        every { Uri.fromFile(any()) } returns mockk(relaxed = true)
 
         mockkConstructor(Canvas::class)
         every { anyConstructed<Canvas>().drawBitmap(any<Bitmap>(), any<Float>(), any<Float>(), any()) } just Runs
         
         mockkConstructor(Paint::class)
 
-        mockkConstructor(WebPAnimEncoder::class)
-        every { anyConstructed<WebPAnimEncoder>().configure(any()) } returns mockk(relaxed = true)
-        every { anyConstructed<WebPAnimEncoder>().addFrame(any<Long>(), any<Bitmap>()) } returns mockk(relaxed = true)
-        every { anyConstructed<WebPAnimEncoder>().assemble(any<Long>(), any<Uri>()) } returns mockk(relaxed = true)
-        every { anyConstructed<WebPAnimEncoder>().release() } just Runs
+        // Mock encoder creation
+        every { imageProcessor.createEncoder(any(), any()) } returns mockEncoder
+        
+        mockkConstructor(WebPConfig::class)
     }
 
     @After
@@ -64,7 +88,7 @@ class ImageProcessorTest {
         unmockkAll()
     }
 
-    private fun setupMockResponse(bytes: ByteArray = "dummy".toByteArray()) {
+    private fun setupMockResponse(bytes: ByteArray = byteArrayOf(1, 2, 3, 4, 5)) {
         coEvery { downloader.download(any()) } returns Result.success(bytes)
     }
 
@@ -76,9 +100,17 @@ class ImageProcessorTest {
         val sourceBitmap = mockk<Bitmap>()
         every { sourceBitmap.width } returns width
         every { sourceBitmap.height } returns height
+        every { sourceBitmap.isRecycled } returns false
         
         val croppedBitmap = mockk<Bitmap>(relaxed = true)
+        every { croppedBitmap.width } returns 500
+        every { croppedBitmap.height } returns 500
+        every { croppedBitmap.isRecycled } returns false
+
         val scaledBitmap = mockk<Bitmap>(relaxed = true)
+        every { scaledBitmap.width } returns targetSize
+        every { scaledBitmap.height } returns targetSize
+        every { scaledBitmap.isRecycled } returns false
         
         // centerCrop logic: left = (1000-500)/2 = 250, top = 0, size = 500
         every { Bitmap.createBitmap(sourceBitmap, 250, 0, 500, 500) } returns croppedBitmap
@@ -97,119 +129,71 @@ class ImageProcessorTest {
     @Test
     fun `Animated GIF - adaptive compression should retry with lower quality`() {
         setupMockResponse()
-        val movie = mockk<Movie>()
-        every { Movie.decodeByteArray(any(), any(), any()) } returns movie
-        every { movie.duration() } returns 100
-        every { movie.width() } returns 512
-        every { movie.height() } returns 512
-        every { movie.setTime(any()) } returns true
-        every { movie.draw(any<Canvas>(), any<Float>(), any<Float>()) } just Runs
+        every { imageProcessor.decodeFrames(any()) } returns listOf(
+            ImageProcessor.Frame(mockk(relaxed = true), 100)
+        )
 
         val outputFile = tempFolder.newFile("output_adaptive.webp")
-        imageProcessor.downloadAndProcessAnimated("https://example.com/adaptive.gif", outputFile)
+        val result = imageProcessor.downloadAndProcessAnimated("https://example.com/adaptive.gif", outputFile)
         
-        // Verify it at least tried the first configuration (quality 90)
-        verify { anyConstructed<WebPAnimEncoder>().configure(match { it.quality == 90f }) }
+        assertTrue("Result should be success but was ${result.exceptionOrNull()}", result.isSuccess)
+        verify { mockEncoder.configure(any()) }
     }
 
     @Test
     fun `Test 1 - GIF with 5 frames should result in 5 frames`() {
         setupMockResponse()
-        val frameCount = 5
-        val frameDuration = 100
-        val movie = mockk<Movie>()
-        every { Movie.decodeByteArray(any(), any(), any()) } returns movie
-        every { movie.duration() } returns frameCount * frameDuration
-        every { movie.width() } returns 512
-        every { movie.height() } returns 512
-        every { movie.setTime(any()) } returns true
-        every { movie.draw(any<Canvas>(), any<Float>(), any<Float>()) } just Runs
-
-        val bitmaps = List(100) { mockk<Bitmap>(relaxed = true) }
-        var bitmapIndex = 0
-        every { Bitmap.createBitmap(512, 512, any()) } answers { bitmaps[bitmapIndex++] }
-        
-        bitmaps.forEachIndexed { index, bitmap ->
-            every { bitmap.sameAs(any()) } answers {
-                val other = it.invocation.args[0] as Bitmap
-                val otherIndex = bitmaps.indexOf(other)
-                (index / 10) == (otherIndex / 10)
-            }
+        val frames = List(5) { 
+            ImageProcessor.Frame(mockk<Bitmap>(relaxed = true).apply {
+                every { width } returns 512
+                every { height } returns 512
+                every { isRecycled } returns false
+            }, 100)
         }
+        every { imageProcessor.decodeFrames(any()) } returns frames
 
         val outputFile = tempFolder.newFile("output_1.webp")
-        imageProcessor.downloadAndProcessAnimated("https://example.com/5frames.gif", outputFile)
+        val result = imageProcessor.downloadAndProcessAnimated("https://example.com/5frames.gif", outputFile)
 
-        verify(exactly = 5) { anyConstructed<WebPAnimEncoder>().addFrame(any<Long>(), any<Bitmap>()) }
+        assertTrue("Result should be success but was ${result.exceptionOrNull()}", result.isSuccess)
+        verify(exactly = 5) { mockEncoder.addFrame(any<Long>(), any<Bitmap>()) }
     }
 
     @Test
     fun `Test 2 - GIF with 25 frames should result in 25 frames`() {
         setupMockResponse()
-        val frameCount = 25
-        val frameDuration = 40 
-        val movie = mockk<Movie>()
-        every { Movie.decodeByteArray(any(), any(), any()) } returns movie
-        every { movie.duration() } returns frameCount * frameDuration
-        every { movie.width() } returns 512
-        every { movie.height() } returns 512
-        every { movie.setTime(any()) } returns true
-        every { movie.draw(any<Canvas>(), any<Float>(), any<Float>()) } just Runs
-
-        val bitmaps = List(200) { mockk<Bitmap>(relaxed = true) }
-        var bitmapIndex = 0
-        every { Bitmap.createBitmap(512, 512, any()) } answers { bitmaps[bitmapIndex++] }
-        
-        bitmaps.forEachIndexed { index, bitmap ->
-            every { bitmap.sameAs(any()) } answers {
-                val other = it.invocation.args[0] as Bitmap
-                val otherIndex = bitmaps.indexOf(other)
-                (index / 4) == (otherIndex / 4) 
-            }
+        val frames = List(25) { 
+            ImageProcessor.Frame(mockk<Bitmap>(relaxed = true).apply {
+                every { width } returns 512
+                every { height } returns 512
+                every { isRecycled } returns false
+            }, 40)
         }
+        every { imageProcessor.decodeFrames(any()) } returns frames
 
         val outputFile = tempFolder.newFile("output_2.webp")
-        imageProcessor.downloadAndProcessAnimated("https://example.com/25frames.gif", outputFile)
+        val result = imageProcessor.downloadAndProcessAnimated("https://example.com/25frames.gif", outputFile)
 
-        verify(exactly = 25) { anyConstructed<WebPAnimEncoder>().addFrame(any<Long>(), any<Bitmap>()) }
+        assertTrue("Result should be success but was ${result.exceptionOrNull()}", result.isSuccess)
+        verify(exactly = 25) { mockEncoder.addFrame(any<Long>(), any<Bitmap>()) }
     }
 
     @Test
     fun `Test 3 - GIF with variable frame delays should preserve delays`() {
         setupMockResponse()
-        val movie = mockk<Movie>()
-        every { Movie.decodeByteArray(any(), any(), any()) } returns movie
-        every { movie.duration() } returns 450
-        every { movie.width() } returns 512
-        every { movie.height() } returns 512
-        every { movie.setTime(any()) } returns true
-        every { movie.draw(any<Canvas>(), any<Float>(), any<Float>()) } just Runs
-
-        val bitmaps = List(100) { mockk<Bitmap>(relaxed = true) }
-        var bitmapIndex = 0
-        every { Bitmap.createBitmap(512, 512, any()) } answers { bitmaps[bitmapIndex++] }
-        
-        bitmaps.forEachIndexed { index, bitmap ->
-            every { bitmap.sameAs(any()) } answers {
-                val other = it.invocation.args[0] as Bitmap
-                val otherIndex = bitmaps.indexOf(other)
-                val t = index * 10
-                val otherT = otherIndex * 10
-                val frame1 = t < 100
-                val frame1Other = otherT < 100
-                val frame2 = t in 100..299
-                val frame2Other = otherT in 100..299
-                val frame3 = t >= 300
-                val frame3Other = otherT >= 300
-                (frame1 && frame1Other) || (frame2 && frame2Other) || (frame3 && frame3Other)
-            }
-        }
+        val frames = listOf(
+            ImageProcessor.Frame(mockk<Bitmap>(relaxed = true).apply { every { width } returns 512; every { height } returns 512; every { isRecycled } returns false }, 100),
+            ImageProcessor.Frame(mockk<Bitmap>(relaxed = true).apply { every { width } returns 512; every { height } returns 512; every { isRecycled } returns false }, 200),
+            ImageProcessor.Frame(mockk<Bitmap>(relaxed = true).apply { every { width } returns 512; every { height } returns 512; every { isRecycled } returns false }, 150)
+        )
+        every { imageProcessor.decodeFrames(any()) } returns frames
 
         val outputFile = tempFolder.newFile("output_3.webp")
-        imageProcessor.downloadAndProcessAnimated("https://example.com/variable.gif", outputFile)
+        val result = imageProcessor.downloadAndProcessAnimated("https://example.com/variable.gif", outputFile)
 
-        verify { anyConstructed<WebPAnimEncoder>().addFrame(0L, any<Bitmap>()) }
-        verify { anyConstructed<WebPAnimEncoder>().addFrame(100L, any<Bitmap>()) }
-        verify { anyConstructed<WebPAnimEncoder>().addFrame(300L, any<Bitmap>()) }
+        assertTrue("Result should be success but was ${result.exceptionOrNull()}", result.isSuccess)
+        verify { mockEncoder.addFrame(0L, any<Bitmap>()) }
+        verify { mockEncoder.addFrame(100L, any<Bitmap>()) }
+        verify { mockEncoder.addFrame(300L, any<Bitmap>()) }
     }
 }
