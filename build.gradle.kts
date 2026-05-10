@@ -2,7 +2,6 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
     alias(libs.plugins.android.application) apply false
-    alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.google.devtools.ksp) apply false
     alias(libs.plugins.dagger.hilt.android) apply false
@@ -24,12 +23,20 @@ plugins {
 // Apply it only to the root project and pure-JVM modules.
 
 val jacocoExclusions = listOf(
-    "**/R.class", "**/R\$*.class", "**/BuildConfig.*", "**/Manifest*.*",
-    "**/*Test*.*", "android/**/*.*",
-    "**/Hilt_*", "**/*_HiltModules*", "**/*_Factory*", "**/*_MembersInjector*",
-    "**/DaggerHilt*", "**/ComposableSingletons*",
-    "**/*Preview*", "**/*Theme*", "**/*ColorKt*", "**/*TypographyKt*",
-    "**/*TypeKt*", "**/*ShapeKt*", "**/*Navigation*", "**/*Route*",
+    "**/R.class",
+    "**/R\$*.class",
+    "**/BuildConfig.*",
+    "**/Manifest*.*",
+    "**/*Test*.*",
+    "**/Hilt_*",
+    "**/*_HiltModules*",
+    "**/*_Factory*",
+    "**/*_MembersInjector*",
+    "**/DaggerHilt*",
+    "**/ComposableSingletons*",
+    "**/*_Impl.*",
+    "**/Dagger*.*",
+    "**/*_LifecycleAdapter.*",
 )
 
 // Apply jacoco only to the pure-JVM :core:model module — safe because it has
@@ -49,13 +56,6 @@ tasks.register<JacocoReport>("jacocoTestReport") {
     group = "verification"
     description = "Generates aggregated JaCoCo coverage report for all modules."
 
-    // Wait for every module's unit-test task before generating the report.
-    dependsOn(
-        subprojects.flatMap { proj ->
-            proj.tasks.matching { t -> t.name == "testDebugUnitTest" || t.name == "test" }
-        }
-    )
-
     reports {
         xml.required.set(true)
         xml.outputLocation.set(
@@ -71,8 +71,12 @@ tasks.register<JacocoReport>("jacocoTestReport") {
         files(
             subprojects.flatMap { proj ->
                 listOf(
-                    // Android modules: AGP 8.3+ / 9.x Kotlin class path
-                    fileTree("${proj.layout.buildDirectory.get()}/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes") {
+                    // Android modules: Kotlin classes
+                    fileTree("${proj.layout.buildDirectory.get()}/tmp/kotlin-classes/debug") {
+                        exclude(jacocoExclusions)
+                    },
+                    // Android modules: Java classes
+                    fileTree("${proj.layout.buildDirectory.get()}/intermediates/javac/debug/classes") {
                         exclude(jacocoExclusions)
                     },
                     // Pure JVM module (:core:model)
@@ -94,11 +98,12 @@ tasks.register<JacocoReport>("jacocoTestReport") {
 
     // AGP's enableUnitTestCoverage writes exec files here (AGP 7+ / 8.x / 9.x).
     executionData.setFrom(
-        fileTree(rootDir) {
-            include("**/outputs/unit_test_code_coverage/**/*.exec")
-            include("**/outputs/code_coverage/**/*.ec")
-            // Gradle jacoco plugin path (used by :core:model / pure JVM modules)
-            include("**/build/jacoco/*.exec")
+        subprojects.map { proj ->
+            fileTree(proj.layout.buildDirectory.map { it.asFile }) {
+                include("outputs/unit_test_code_coverage/**/*.exec")
+                include("outputs/code_coverage/**/*.ec")
+                include("jacoco/*.exec") // For JVM modules like :core:model
+            }
         }
     )
 }
