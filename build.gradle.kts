@@ -56,7 +56,8 @@ tasks.register<JacocoReport>("jacocoTestReport") {
     group = "verification"
     description = "Generates aggregated JaCoCo coverage report for all modules."
 
-    // Fix: Explicitly declare dependencies on compilation and test tasks to satisfy Gradle 9.x+ validation.
+    // Explicitly declare dependencies on all tasks whose outputs are consumed by this
+    // report, as required by Gradle 9.x strict task-dependency validation.
     subprojects.forEach { proj ->
         dependsOn(proj.tasks.matching {
             it.name == "compileDebugKotlin" ||
@@ -64,7 +65,7 @@ tasks.register<JacocoReport>("jacocoTestReport") {
             it.name == "compileKotlin" ||
             it.name == "compileJava" ||
             it.name == "testDebugUnitTest" ||
-            // Only include 'test' for JVM modules to avoid triggering connected tests in some Android versions/configurations
+            it.name == "connectedDebugAndroidTest" ||
             (it.name == "test" && !proj.plugins.hasPlugin("com.android.library") && !proj.plugins.hasPlugin("com.android.application"))
         })
     }
