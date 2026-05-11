@@ -60,9 +60,14 @@ tasks.register<JacocoReport>("jacocoTestReport") {
     subprojects.forEach { proj ->
         dependsOn(proj.tasks.matching {
             it.name == "compileDebugKotlin" ||
+            it.name == "compileDebugJavaWithJavac" ||
             it.name == "compileKotlin" ||
+            it.name == "compileJava" ||
             it.name == "testDebugUnitTest" ||
-            it.name == "test"
+            it.name == "test" ||
+            it.name == "connectedDebugAndroidTest" ||
+            it.name == "connectedAndroidTest" ||
+            it.name == "createDebugCoverageReport"
         })
     }
 
@@ -110,6 +115,9 @@ tasks.register<JacocoReport>("jacocoTestReport") {
                     include("**/*.exec")
                 },
                 proj.fileTree(proj.layout.buildDirectory.dir("outputs/code_coverage")) {
+                    include("**/*.ec")
+                },
+                proj.fileTree(proj.layout.buildDirectory.dir("outputs/connected_android_test_code_coverage")) {
                     include("**/*.ec")
                 },
                 proj.fileTree(proj.layout.buildDirectory.dir("jacoco")) {
