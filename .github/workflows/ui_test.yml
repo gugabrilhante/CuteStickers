@@ -51,15 +51,14 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           disable-animations: true
-          script: ./gradlew connectedDebugAndroidTest jacocoTestReport --stacktrace
+          script: ./gradlew clean connectedDebugAndroidTest --stacktrace
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+      - name: Upload execution data
+        uses: actions/upload-artifact@v4
         with:
-          files: build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml
-          flags: uitests
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
+          name: ui-test-exec
+          path: '**/build/outputs/connected_android_test_code_coverage/**/*.ec'
+          if-no-files-found: warn
 
       - name: Upload UI test reports
         if: always()

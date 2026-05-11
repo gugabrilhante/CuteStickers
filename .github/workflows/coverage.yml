@@ -1,0 +1,61 @@
+name: Coverage Report
+
+on:
+  workflow_run:
+    workflows: ["Unit Tests", "UI Tests"]
+    types:
+      - completed
+
+jobs:
+  coverage:
+    name: Generate and Upload Coverage
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Compile Debug Classes
+        run: ./gradlew compileDebugKotlin --parallel
+
+      - name: Download Execution Data
+        uses: actions/download-artifact@v4
+        with:
+          pattern: '*-exec'
+          merge-multiple: true
+          path: coverage-data
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Generate Aggregated Report
+        run: |
+          ./gradlew jacocoTestReport --stacktrace
+          if [ ! -f build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml ]; then
+            echo "Error: JaCoCo XML report not found!"
+            exit 1
+          fi
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: ${{ contains(github.event.workflow_run.name, 'Unit') && 'unittests' || 'uitests' }}
+          name: codecov-umbrella
+          fail_ci_if_error: true
+          verbose: true

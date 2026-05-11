@@ -37,6 +37,18 @@ val jacocoExclusions = listOf(
     "**/*_Impl.*",
     "**/Dagger*.*",
     "**/*_LifecycleAdapter.*",
+    "**/*_ViewBinding*.*",
+    "**/*_ViewBinder*.*",
+    "**/*_GeneratedInstaller*.*",
+    "**/BR.class",
+    "**/DataBindingInfo.class",
+    "**/DataBinderMapperImpl.class",
+    "**/DataBinderMapperImpl\$*.class",
+    "**/*Args*.*",
+    "**/*Directions*.*",
+    "**/*_Provide*.*",
+    "**/*_Inject*.*",
+    "**/*_Module*.*"
 )
 
 // Apply jacoco only to the pure-JVM :core:model module — safe because it has
@@ -113,16 +125,28 @@ tasks.register<JacocoReport>("jacocoTestReport") {
     // Use a Callable to avoid automatic task dependencies on connected tests
     // when we only want to collect existing results during execution.
     executionData.setFrom(files(java.util.concurrent.Callable {
-        subprojects.flatMap { proj ->
-            val buildDir = proj.projectDir.resolve("build")
-            listOf(
-                buildDir.resolve("outputs/unit_test_code_coverage"),
-                buildDir.resolve("outputs/code_coverage"),
-                buildDir.resolve("outputs/connected_android_test_code_coverage"),
-                buildDir.resolve("jacoco")
-            ).filter { it.exists() }.map { dir ->
-                fileTree(dir) { include("**/*.exec", "**/*.ec") }
+        val allExecFiles = mutableListOf<File>()
+        subprojects.forEach { proj ->
+            val buildDir = proj.layout.buildDirectory.asFile.get()
+            val possibleDirs = listOf(
+                File(buildDir, "outputs/unit_test_code_coverage"),
+                File(buildDir, "outputs/code_coverage"),
+                File(buildDir, "outputs/connected_android_test_code_coverage"),
+                File(buildDir, "jacoco")
+            )
+            possibleDirs.filter { it.exists() }.forEach { dir ->
+                dir.walkTopDown().filter { it.extension == "exec" || it.extension == "ec" }.forEach {
+                    allExecFiles.add(it)
+                }
             }
         }
+        // Also look in a root 'coverage-data' directory (useful for CI artifacts)
+        val ciDataDir = file("coverage-data")
+        if (ciDataDir.exists()) {
+            ciDataDir.walkTopDown().filter { it.extension == "exec" || it.extension == "ec" }.forEach {
+                allExecFiles.add(it)
+            }
+        }
+        allExecFiles
     }))
 }

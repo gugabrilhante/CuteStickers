@@ -33,15 +33,14 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run unit tests
-        run: ./gradlew testDebugUnitTest jacocoTestReport --stacktrace
+        run: ./gradlew clean testDebugUnitTest --stacktrace
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+      - name: Upload execution data
+        uses: actions/upload-artifact@v4
         with:
-          files: build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml
-          flags: unittests
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
+          name: unit-test-exec
+          path: '**/build/outputs/unit_test_code_coverage/debugUnitTest/*.exec'
+          if-no-files-found: error
 
       - name: Upload test reports
         if: always()

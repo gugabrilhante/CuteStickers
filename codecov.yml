@@ -1,5 +1,5 @@
 codecov:
-  branch: master
+  branch: master # Update this if your default branch is different, e.g., main
   notify:
     require_ci_to_pass: yes
     after_n_builds: 2
