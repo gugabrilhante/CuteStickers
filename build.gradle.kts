@@ -64,10 +64,8 @@ tasks.register<JacocoReport>("jacocoTestReport") {
             it.name == "compileKotlin" ||
             it.name == "compileJava" ||
             it.name == "testDebugUnitTest" ||
-            it.name == "test" ||
-            it.name == "connectedDebugAndroidTest" ||
-            it.name == "connectedAndroidTest" ||
-            it.name == "createDebugCoverageReport"
+            // Only include 'test' for JVM modules to avoid triggering connected tests in some Android versions/configurations
+            (it.name == "test" && !proj.plugins.hasPlugin("com.android.library") && !proj.plugins.hasPlugin("com.android.application"))
         })
     }
 
@@ -108,19 +106,22 @@ tasks.register<JacocoReport>("jacocoTestReport") {
     )
 
     // AGP's enableUnitTestCoverage writes exec files here (AGP 7+ / 8.x / 9.x).
+    // Use .asFile.get() to avoid automatic task dependencies on connected tests
+    // when we only want to collect existing results.
     executionData.setFrom(
         subprojects.flatMap { proj ->
+            val buildDir = proj.layout.buildDirectory.asFile.get()
             listOf(
-                proj.fileTree(proj.layout.buildDirectory.dir("outputs/unit_test_code_coverage")) {
+                proj.fileTree(buildDir.resolve("outputs/unit_test_code_coverage")) {
                     include("**/*.exec")
                 },
-                proj.fileTree(proj.layout.buildDirectory.dir("outputs/code_coverage")) {
+                proj.fileTree(buildDir.resolve("outputs/code_coverage")) {
                     include("**/*.ec")
                 },
-                proj.fileTree(proj.layout.buildDirectory.dir("outputs/connected_android_test_code_coverage")) {
+                proj.fileTree(buildDir.resolve("outputs/connected_android_test_code_coverage")) {
                     include("**/*.ec")
                 },
-                proj.fileTree(proj.layout.buildDirectory.dir("jacoco")) {
+                proj.fileTree(buildDir.resolve("jacoco")) {
                     include("**/*.exec")
                 }
             )
