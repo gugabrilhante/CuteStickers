@@ -65,7 +65,6 @@ tasks.register<JacocoReport>("jacocoTestReport") {
             it.name == "compileKotlin" ||
             it.name == "compileJava" ||
             it.name == "testDebugUnitTest" ||
-            it.name == "connectedDebugAndroidTest" ||
             (it.name == "test" && !proj.plugins.hasPlugin("com.android.library") && !proj.plugins.hasPlugin("com.android.application"))
         })
     }
@@ -107,25 +106,19 @@ tasks.register<JacocoReport>("jacocoTestReport") {
     )
 
     // AGP's enableUnitTestCoverage writes exec files here (AGP 7+ / 8.x / 9.x).
-    // Use .asFile.get() to avoid automatic task dependencies on connected tests
-    // when we only want to collect existing results.
-    executionData.setFrom(
+    // Use a Callable to avoid automatic task dependencies on connected tests
+    // when we only want to collect existing results during execution.
+    executionData.setFrom(files(java.util.concurrent.Callable {
         subprojects.flatMap { proj ->
-            val buildDir = proj.layout.buildDirectory.asFile.get()
+            val buildDir = proj.projectDir.resolve("build")
             listOf(
-                proj.fileTree(buildDir.resolve("outputs/unit_test_code_coverage")) {
-                    include("**/*.exec")
-                },
-                proj.fileTree(buildDir.resolve("outputs/code_coverage")) {
-                    include("**/*.ec")
-                },
-                proj.fileTree(buildDir.resolve("outputs/connected_android_test_code_coverage")) {
-                    include("**/*.ec")
-                },
-                proj.fileTree(buildDir.resolve("jacoco")) {
-                    include("**/*.exec")
-                }
-            )
+                buildDir.resolve("outputs/unit_test_code_coverage"),
+                buildDir.resolve("outputs/code_coverage"),
+                buildDir.resolve("outputs/connected_android_test_code_coverage"),
+                buildDir.resolve("jacoco")
+            ).filter { it.exists() }.map { dir ->
+                fileTree(dir) { include("**/*.exec", "**/*.ec") }
+            }
         }
-    )
+    }))
 }
