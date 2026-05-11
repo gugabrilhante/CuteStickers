@@ -59,6 +59,10 @@ tasks.register<JacocoReport>("jacocoTestReport") {
     // Explicitly declare dependencies on all tasks whose outputs are consumed by this
     // report, as required by Gradle 9.x strict task-dependency validation.
     subprojects.forEach { proj ->
+        // Declare that we MUST run after connected tests IF they are in the task graph,
+        // but don't force them to run if they weren't requested.
+        mustRunAfter(proj.tasks.matching { it.name == "connectedDebugAndroidTest" })
+
         dependsOn(proj.tasks.matching {
             it.name == "compileDebugKotlin" ||
             it.name == "compileDebugJavaWithJavac" ||
