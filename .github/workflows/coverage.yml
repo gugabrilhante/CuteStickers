@@ -47,6 +47,7 @@ jobs:
           ./gradlew jacocoTestReport --stacktrace
           if [ ! -f build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml ]; then
             echo "Error: JaCoCo XML report not found!"
+            ls -R build/reports
             exit 1
           fi
 

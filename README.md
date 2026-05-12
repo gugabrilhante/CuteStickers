@@ -5,7 +5,7 @@
 <!-- [![UI Tests](https://github.com/gugabrilhante/CuteCats/actions/workflows/ui_test.yml/badge.svg?branch=master)](https://github.com/gugabrilhante/CuteCats/actions/workflows/ui_test.yml) -->
 <!-- [![codecov](https://codecov.io/gh/gugabrilhante/CuteCats/branch/master/graph/badge.svg)](https://codecov.io/gh/gugabrilhante/CuteCats) -->
 
-CuteStickers is a scalable Android application built with Jetpack Compose, Hilt, and KSP, following modern architectural principles. Originally focused on cute animal GIFs, the project has been refactored to be domain-agnostic, supporting a wide range of media content categories like cats, dogs, stickers, anime, and more.
+CuteStickers is a scalable Android application built with Jetpack Compose, Hilt, and KSP, following modern architectural principles. The project is designed to be domain-agnostic and scalable for any type of media content. Currently, it supports browsing cats and dogs, powered by [TheCatAPI](https://thecatapi.com/) and [TheDogAPI](https://thedogapi.com/).
 
 ## Architecture
 
@@ -45,6 +45,7 @@ The refactored architecture offers several benefits for future growth:
 - **Hilt**: For dependency injection.
 - **KSP (Kotlin Symbol Processing)**: For efficient annotation processing.
 - **Retrofit**: For network requests.
+- **TheCatAPI & TheDogAPI**: Data sources for cat and dog media.
 - **Kotlin Serialization**: For domain-agnostic data parsing.
 - **Navigation 3**: For type-safe and scalable navigation.
 - **Shared Element Transitions**: For smooth UI animations between screens.
