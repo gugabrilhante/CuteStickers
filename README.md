@@ -2,8 +2,8 @@
 
 [![Build](https://github.com/gugabrilhante/CuteCats/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/gugabrilhante/CuteCats/actions/workflows/build.yml)
 [![Unit Tests](https://github.com/gugabrilhante/CuteCats/actions/workflows/unit_test.yml/badge.svg?branch=master)](https://github.com/gugabrilhante/CuteCats/actions/workflows/unit_test.yml)
-[![UI Tests](https://github.com/gugabrilhante/CuteCats/actions/workflows/ui_test.yml/badge.svg?branch=master)](https://github.com/gugabrilhante/CuteCats/actions/workflows/ui_test.yml)
-[![codecov](https://codecov.io/gh/gugabrilhante/CuteCats/branch/master/graph/badge.svg)](https://codecov.io/gh/gugabrilhante/CuteCats)
+<!-- [![UI Tests](https://github.com/gugabrilhante/CuteCats/actions/workflows/ui_test.yml/badge.svg?branch=master)](https://github.com/gugabrilhante/CuteCats/actions/workflows/ui_test.yml) -->
+<!-- [![codecov](https://codecov.io/gh/gugabrilhante/CuteCats/branch/master/graph/badge.svg)](https://codecov.io/gh/gugabrilhante/CuteCats) -->
 
 CuteStickers is a scalable Android application built with Jetpack Compose, Hilt, and KSP, following modern architectural principles. Originally focused on cute animal GIFs, the project has been refactored to be domain-agnostic, supporting a wide range of media content categories like cats, dogs, stickers, anime, and more.
 
