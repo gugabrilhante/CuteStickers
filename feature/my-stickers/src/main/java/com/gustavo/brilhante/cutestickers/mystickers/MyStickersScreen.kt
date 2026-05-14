@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import com.gustavo.brilhante.cutestickers.model.MediaItem
 import com.gustavo.brilhante.cutestickers.mystickers.R as MyR
 import com.gustavo.brilhante.cutestickers.ui.R as UiR
@@ -145,6 +146,10 @@ fun MyStickersScreen(
     val successState = uiState as? MyStickersUiState.Success
     val selectedIds = successState?.selectedIds ?: emptySet()
     val isInSelectionMode = selectedIds.isNotEmpty()
+
+    BackHandler(enabled = isInSelectionMode) {
+        onClearSelection()
+    }
 
     Scaffold(
         modifier = modifier,

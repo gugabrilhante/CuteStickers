@@ -19,15 +19,17 @@ class MediaRepositoryImpl(
     private val paginationSession: PaginationSession,
     private val timeProvider: TimeProvider,
     private val featureKey: String,
-    private val ioDispatcher: CoroutineDispatcher
+    private val ioDispatcher: CoroutineDispatcher,
+    private val cacheExpirationMs: Long = 60 * 60 * 1000L // 1 hour default
 ) : MediaRepository {
 
-    private val CACHE_EXPIRATION_MS = 10 * 60 * 1000L
     private val PAGINATION_LIMIT = 4
 
     override fun getMedia(): Flow<List<MediaItem>> = localDataSource.getMedia()
 
-    override suspend fun refresh(): Unit = withContext(ioDispatcher) {
+    override suspend fun refresh(force: Boolean): Boolean = withContext(ioDispatcher) {
+        if (!force && !shouldRefreshCache()) return@withContext false
+
         val remoteItems = mediaService.getMedia(limit = 20)
         val mediaItems = remoteItems.map { MediaItem(id = it.id, url = it.url) }
         
@@ -42,6 +44,7 @@ class MediaRepositoryImpl(
             )
         )
         paginationSession.resetSession(featureKey)
+        true
     }
 
     override suspend fun loadNextPage(): Unit = withContext(ioDispatcher) {
@@ -71,6 +74,6 @@ class MediaRepositoryImpl(
     private suspend fun shouldRefreshCache(): Boolean {
         val metadata = cacheMetadataDao.getMetadata(featureKey) ?: return true
         val currentTime = timeProvider.getCurrentTimeMillis()
-        return (currentTime - metadata.lastUpdated) >= CACHE_EXPIRATION_MS
+        return (currentTime - metadata.lastUpdated) >= cacheExpirationMs
     }
 }

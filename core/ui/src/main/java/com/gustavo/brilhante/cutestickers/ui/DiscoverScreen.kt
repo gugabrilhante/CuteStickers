@@ -1,5 +1,6 @@
 package com.gustavo.brilhante.cutestickers.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -119,9 +120,14 @@ fun DiscoverScreen(
     modifier: Modifier = Modifier,
     selectedIds: Set<String> = emptySet(),
     onItemLongClick: (MediaItem) -> Unit = {},
+    onClearSelection: () -> Unit = {},
     onSaveSelectionToMyStickers: () -> Unit = {}
 ) {
     val gridState = rememberLazyGridState()
+
+    BackHandler(enabled = selectedIds.isNotEmpty()) {
+        onClearSelection()
+    }
 
     val shouldLoadMore = remember {
         derivedStateOf {

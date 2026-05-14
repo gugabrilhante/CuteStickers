@@ -40,6 +40,7 @@ fun DogsRoute(
             if (selectedIds.isNotEmpty()) viewModel.toggleSelection(item) else onItemClick(item)
         },
         onItemLongClick = viewModel::toggleSelection,
+        onClearSelection = viewModel::clearSelection,
         onSaveSelectionToMyStickers = viewModel::saveSelectionToMyStickers,
         onRefresh = viewModel::refresh,
         onLoadMore = viewModel::loadMore,

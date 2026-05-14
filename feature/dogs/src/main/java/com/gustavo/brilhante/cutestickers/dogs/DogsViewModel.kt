@@ -37,7 +37,7 @@ class DogsViewModel @Inject constructor(
     val selectedIds: StateFlow<Set<String>> = _selectedIds.asStateFlow()
 
     init {
-        refresh()
+        refresh(force = false)
     }
 
     val uiState: StateFlow<DiscoverUiState> = combine(
@@ -71,13 +71,13 @@ class DogsViewModel @Inject constructor(
         initialValue = DiscoverUiState.Loading
     )
 
-    fun refresh() {
+    fun refresh(force: Boolean = true) {
         viewModelScope.launch {
-            isRefreshing.value = true
+            if (force) isRefreshing.value = true
             errorState.value = null
             clearSelection()
             try {
-                refreshMediaUseCase()
+                refreshMediaUseCase(force)
             } catch (e: Exception) {
                 errorState.value = (e.message ?: "Failed to refresh") to (e is UnknownHostException)
             } finally {

@@ -39,14 +39,17 @@ val LocalSharedTransitionScope = compositionLocalOf<SharedTransitionScope?> { nu
 fun CuteStickersApp(
     preferencesManager: PreferencesManager = hiltViewModel<AppViewModel>().preferencesManager
 ) {
-    val items = listOf(
-        Screen.Cats,
-        Screen.Dogs,
-        Screen.MyStickers,
-    )
+    val items = remember {
+        listOf(
+            Screen.Cats,
+            Screen.Dogs,
+            Screen.MyStickers,
+        )
+    }
+    val topLevelRoutes = remember(items) { items.toSet() }
     val navigationState = rememberNavigationState(
         startRoute = Screen.Cats,
-        topLevelRoutes = items.toSet()
+        topLevelRoutes = topLevelRoutes
     )
     val navigator = remember { Navigator(navigationState) }
 
