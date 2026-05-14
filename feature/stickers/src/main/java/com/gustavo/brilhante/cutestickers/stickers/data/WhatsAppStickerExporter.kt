@@ -1,17 +1,16 @@
 package com.gustavo.brilhante.cutestickers.stickers.data
 
-import android.content.Context
 import com.gustavo.brilhante.cutestickers.common.PackageManagerWrapper
+import com.gustavo.brilhante.cutestickers.stickers.di.AppPackageName
 import com.gustavo.brilhante.cutestickers.stickers.domain.ExportMetadata
 import com.gustavo.brilhante.cutestickers.stickers.domain.StickerExporter
 import com.gustavo.brilhante.cutestickers.stickers.domain.StickerPack
-import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 internal class WhatsAppStickerExporter @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @AppPackageName private val appPackageName: String,
     private val packageManagerWrapper: PackageManagerWrapper,
     private val stickerStore: StickerStore
 ) : StickerExporter {
@@ -36,7 +35,7 @@ internal class WhatsAppStickerExporter @Inject constructor(
 
         ExportMetadata(
             packId = pack.id,
-            authority = "${context.packageName}.StickerContentProvider",
+            authority = "$appPackageName.StickerContentProvider",
             packName = pack.name,
             publisher = pack.publisher,
             trayImageFileName = pack.trayImageFileName,

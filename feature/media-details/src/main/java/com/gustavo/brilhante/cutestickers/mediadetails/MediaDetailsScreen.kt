@@ -1,6 +1,7 @@
 package com.gustavo.brilhante.cutestickers.mediadetails
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -96,7 +97,16 @@ fun MediaDetailsRoute(
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                is MediaDetailsEvent.LaunchIntent -> stickerImportLauncher.launch(event.intent)
+                is MediaDetailsEvent.ExportToWhatsApp -> {
+                    val intent = Intent().apply {
+                        action = "com.whatsapp.intent.action.ENABLE_STICKER_PACK"
+                        putExtra("sticker_pack_id", event.packId)
+                        putExtra("sticker_pack_authority", event.authority)
+                        putExtra("sticker_pack_name", event.packName)
+                        setPackage(event.targetPackage)
+                    }
+                    stickerImportLauncher.launch(intent)
+                }
             }
         }
     }

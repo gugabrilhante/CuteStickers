@@ -44,7 +44,12 @@ data class MediaDetailsUiState(
 )
 
 sealed interface MediaDetailsEvent {
-    data class LaunchIntent(val intent: Intent) : MediaDetailsEvent
+    data class ExportToWhatsApp(
+        val packId: String,
+        val authority: String,
+        val packName: String,
+        val targetPackage: String
+    ) : MediaDetailsEvent
 }
 
 @HiltViewModel
@@ -91,14 +96,14 @@ class MediaDetailsViewModel @Inject constructor(
         viewModelScope.launch {
             exportStickerPackUseCase.getExportMetadata(pack)
                 .onSuccess { metadata ->
-                    val intent = Intent().apply {
-                        action = "com.whatsapp.intent.action.ENABLE_STICKER_PACK"
-                        putExtra("sticker_pack_id", metadata.packId)
-                        putExtra("sticker_pack_authority", metadata.authority)
-                        putExtra("sticker_pack_name", metadata.packName)
-                        setPackage(metadata.targetPackage)
-                    }
-                    _events.send(MediaDetailsEvent.LaunchIntent(intent))
+                    _events.send(
+                        MediaDetailsEvent.ExportToWhatsApp(
+                            packId = metadata.packId,
+                            authority = metadata.authority,
+                            packName = metadata.packName,
+                            targetPackage = metadata.targetPackage
+                        )
+                    )
                 }
                 .onFailure { e ->
                     _uiState.update {

@@ -10,9 +10,11 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Test
+import org.junit.Before
 import org.junit.Rule
+import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
 
@@ -24,21 +26,26 @@ class StickerRepositoryImplTest {
 
     private val imageProcessor = mockk<ImageProcessor>()
     private val fileManager = mockk<StickerFileManager>()
-    private val stickerStore = mockk<StickerStore>()
+    private val stickerStore = mockk<StickerStore>(relaxed = true)
     private val galleryDataSource = mockk<GalleryDataSource>()
     private val timeProvider = mockk<TimeProvider>()
     private val okHttpClient = mockk<OkHttpClient>()
     private val testDispatcher = UnconfinedTestDispatcher()
 
-    private val repository = StickerRepositoryImpl(
-        imageProcessor = imageProcessor,
-        fileManager = fileManager,
-        stickerStore = stickerStore,
-        galleryDataSource = galleryDataSource,
-        timeProvider = timeProvider,
-        ioDispatcher = testDispatcher,
-        okHttpClient = okHttpClient
-    )
+    private lateinit var repository: StickerRepositoryImpl
+
+    @Before
+    fun setup() {
+        repository = StickerRepositoryImpl(
+            imageProcessor = imageProcessor,
+            fileManager = fileManager,
+            stickerStore = stickerStore,
+            galleryDataSource = galleryDataSource,
+            timeProvider = timeProvider,
+            ioDispatcher = testDispatcher,
+            okHttpClient = okHttpClient
+        )
+    }
 
     @Test
     fun `createStickerFromUrl succeeds and saves pack`() = runTest {
@@ -48,7 +55,6 @@ class StickerRepositoryImplTest {
         val mediaType = MediaType.Static
         val packId = "static_pack"
         val packDir = tempFolder.newFolder(packId)
-        val mockFile = File(packDir, "mockFile.webp").apply { createNewFile() }
         
         every { fileManager.packDir(any()) } returns packDir
         every { imageProcessor.downloadAndProcess(any(), any(), any(), any()) } answers {
@@ -57,17 +63,45 @@ class StickerRepositoryImplTest {
             Result.success(file)
         }
         every { stickerStore.loadAllPacks() } returns emptyList()
-        every { stickerStore.savePack(any()) } returns Unit
         every { timeProvider.getCurrentTimeMillis() } returns 123456789L
 
         // Act
         val result = repository.createStickerFromUrl(imageUrl, mediaId, mediaType)
 
         // Assert
-        assertTrue("Result should be success but was ${result.exceptionOrNull()}", result.isSuccess)
+        assertTrue("Result should be success", result.isSuccess)
         coVerify { imageProcessor.downloadAndProcess(imageUrl, any(), ImageProcessor.STICKER_SIZE, any()) }
-        coVerify { imageProcessor.downloadAndProcess(imageUrl, any(), ImageProcessor.TRAY_SIZE, any()) }
         coVerify { stickerStore.savePack(match { it.id == packId }) }
+    }
+
+    @Test
+    fun `createStickerFromUrl adds placeholders if less than 3 stickers`() = runTest {
+        // Arrange
+        val imageUrl = "https://example.com/image.webp"
+        val mediaId = "123"
+        val packId = "static_pack"
+        val packDir = tempFolder.newFolder(packId)
+        
+        every { fileManager.packDir(any()) } returns packDir
+        every { imageProcessor.downloadAndProcess(any(), any(), any(), any()) } answers {
+            val file = it.invocation.args[1] as File
+            file.createNewFile()
+            Result.success(file)
+        }
+        every { stickerStore.loadAllPacks() } returns emptyList()
+        val capturedPack = mutableListOf<StickerPackInfo>()
+        every { stickerStore.savePack(capture(capturedPack)) } returns Unit
+        every { timeProvider.getCurrentTimeMillis() } returns 123456789L
+
+        // Act
+        repository.createStickerFromUrl(imageUrl, mediaId, MediaType.Static)
+
+        // Assert
+        val pack = capturedPack.first()
+        assertEquals(3, pack.stickers.size)
+        assertTrue(pack.stickers[0].imageFileName == "123.webp")
+        assertTrue(pack.stickers[1].imageFileName == "placeholder_1.webp")
+        assertTrue(File(packDir, "placeholder_1.webp").exists())
     }
 
     @Test

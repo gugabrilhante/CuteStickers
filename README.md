@@ -2,8 +2,9 @@
 
 [![Build](https://github.com/gugabrilhante/CuteCats/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/gugabrilhante/CuteCats/actions/workflows/build.yml)
 [![Unit Tests](https://github.com/gugabrilhante/CuteCats/actions/workflows/unit_test.yml/badge.svg?branch=master)](https://github.com/gugabrilhante/CuteCats/actions/workflows/unit_test.yml)
-<!-- [![UI Tests](https://github.com/gugabrilhante/CuteCats/actions/workflows/ui_test.yml/badge.svg?branch=master)](https://github.com/gugabrilhante/CuteCats/actions/workflows/ui_test.yml) -->
-<!-- [![codecov](https://codecov.io/gh/gugabrilhante/CuteCats/branch/master/graph/badge.svg)](https://codecov.io/gh/gugabrilhante/CuteCats) -->
+[![UI Tests](https://github.com/gugabrilhante/CuteCats/actions/workflows/ui_test.yml/badge.svg?branch=master)](https://github.com/gugabrilhante/CuteCats/actions/workflows/ui_test.yml)
+[![Coverage](https://github.com/gugabrilhante/CuteCats/actions/workflows/coverage.yml/badge.svg?branch=master)](https://github.com/gugabrilhante/CuteCats/actions/workflows/coverage.yml)
+[![codecov](https://codecov.io/gh/gugabrilhante/CuteCats/branch/master/graph/badge.svg)](https://codecov.io/gh/gugabrilhante/CuteCats)
 
 CuteStickers is a scalable Android application built with Jetpack Compose, Hilt, and KSP, following modern architectural principles. The project is designed to be domain-agnostic and scalable for any type of media content. Currently, it supports browsing cats and dogs, powered by [TheCatAPI](https://thecatapi.com/) and [TheDogAPI](https://thedogapi.com/).
 
