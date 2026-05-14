@@ -21,6 +21,10 @@ import javax.inject.Singleton
 @Retention(AnnotationRetention.BINARY)
 annotation class StickersDir
 
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class AppPackageName
+
 @Module
 @InstallIn(SingletonComponent::class)
 internal abstract class StickersModule {
@@ -43,6 +47,12 @@ internal abstract class StickersModule {
         @StickersDir
         fun provideStickersDir(@ApplicationContext context: Context): File {
             return File(context.filesDir, "stickers")
+        }
+
+        @Provides
+        @AppPackageName
+        fun provideAppPackageName(@ApplicationContext context: Context): String {
+            return context.packageName
         }
     }
 }

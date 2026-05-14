@@ -91,7 +91,10 @@ class MediaDetailsViewModelTest {
         
         viewModel.onConfirmExport(pack)
         
-        assertTrue(events.first() is MediaDetailsEvent.LaunchIntent)
+        assertTrue(events.first() is MediaDetailsEvent.ExportToWhatsApp)
+        val event = events.first() as MediaDetailsEvent.ExportToWhatsApp
+        assertEquals("id", event.packId)
+        assertEquals("pkg", event.targetPackage)
         collectJob.cancel()
     }
 

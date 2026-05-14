@@ -26,6 +26,10 @@ internal class StickerRepositoryImpl @Inject constructor(
     private val okHttpClient: OkHttpClient
 ) : StickerRepository {
 
+    init {
+        stickerStore.migrateIfNeeded()
+    }
+
     override suspend fun createStickerFromUrl(
         imageUrl: String,
         mediaId: String,
