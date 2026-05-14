@@ -18,4 +18,7 @@
     <string name="tap_to_add_to_whatsapp">Toque para adicionar este sticker ao WhatsApp</string>
     <string name="saved_to_gallery">Salvo na galeria!</string>
     <string name="crop">Recortar</string>
+    <string name="retry">Tentar novamente</string>
+    <string name="error_message">Ops! Algo deu errado.</string>
+    <string name="error_no_internet">Sem conexão com a internet. Verifique sua rede.</string>
 </resources>

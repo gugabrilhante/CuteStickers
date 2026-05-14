@@ -5,17 +5,21 @@
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+-keepattributes Signature, AnnotationDefault, EnclosingMethod, InnerClasses, SourceFile, LineNumberTable
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Retrofit
+-keepattributes Exceptions
+-keep class retrofit2.** { *; }
+-keepclasseswithmembers interface * {
+    @retrofit2.http.* <methods>;
+}
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Kotlin Serialization
+-keepclassmembers class * {
+    @kotlinx.serialization.Serializable *;
+    @kotlinx.serialization.SerialName *;
+}
+
+# Keep Data Models
+-keep class com.gustavo.brilhante.cutestickers.network.model.** { *; }
+-keep class com.gustavo.brilhante.cutestickers.model.** { *; }

@@ -44,31 +44,12 @@ class MediaRepositoryImplTest {
     }
 
     @Test
-    fun `getMedia should refresh when cache is expired`() = runTest(testDispatcher) {
+    fun `getMedia should NOT refresh automatically`() = runTest(testDispatcher) {
         // Arrange
         val currentTime = 1000000L
         val expiredTime = currentTime - (11 * 60 * 1000L) // 11 mins ago
         every { timeProvider.getCurrentTimeMillis() } returns currentTime
         coEvery { cacheMetadataDao.getMetadata("test") } returns CacheMetadataEntity("test", expiredTime)
-        coEvery { mediaService.getMedia(any(), any()) } returns listOf(NetworkMediaItem("1", "url1"))
-        every { localDataSource.getMedia() } returns flowOf(emptyList())
-
-        // Act
-        repository.getMedia().first()
-
-        // Assert
-        coVerify { mediaService.getMedia(limit = 20, page = 0) }
-        coVerify { localDataSource.clear() }
-        coVerify { localDataSource.insertAll(any()) }
-    }
-
-    @Test
-    fun `getMedia should NOT refresh when cache is young`() = runTest(testDispatcher) {
-        // Arrange
-        val currentTime = 1000000L
-        val youngTime = currentTime - (5 * 60 * 1000L) // 5 mins ago
-        every { timeProvider.getCurrentTimeMillis() } returns currentTime
-        coEvery { cacheMetadataDao.getMetadata("test") } returns CacheMetadataEntity("test", youngTime)
         every { localDataSource.getMedia() } returns flowOf(emptyList())
 
         // Act
@@ -76,6 +57,23 @@ class MediaRepositoryImplTest {
 
         // Assert
         coVerify(exactly = 0) { mediaService.getMedia(any(), any()) }
+    }
+
+    @Test
+    fun `refresh should fetch from network and update local storage`() = runTest(testDispatcher) {
+        // Arrange
+        val currentTime = 1000000L
+        every { timeProvider.getCurrentTimeMillis() } returns currentTime
+        coEvery { mediaService.getMedia(any(), any()) } returns listOf(NetworkMediaItem("1", "url1"))
+
+        // Act
+        repository.refresh()
+
+        // Assert
+        coVerify { mediaService.getMedia(limit = 20, page = 0) }
+        coVerify { localDataSource.clear() }
+        coVerify { localDataSource.insertAll(any()) }
+        coVerify { cacheMetadataDao.insertMetadata(any()) }
     }
 
     @Test

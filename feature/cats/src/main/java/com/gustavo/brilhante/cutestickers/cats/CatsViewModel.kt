@@ -11,10 +11,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.io.IOException
 import javax.inject.Inject
 
 @HiltViewModel
@@ -26,23 +26,37 @@ class CatsViewModel @Inject constructor(
 
     private val isRefreshing = MutableStateFlow(false)
     private val isLoadingMore = MutableStateFlow(false)
+    private val errorState = MutableStateFlow<Pair<String, Boolean>?>(null)
+
+    init {
+        refresh()
+    }
 
     val uiState: StateFlow<DiscoverUiState> = combine(
         getCachedMediaUseCase(),
         isRefreshing,
-        isLoadingMore
-    ) { items, refreshing, loadingMore ->
-        if (items.isEmpty() && !refreshing && !loadingMore) {
-            DiscoverUiState.Loading
-        } else {
-            DiscoverUiState.Success(
-                items = items,
-                isRefreshing = refreshing,
-                isLoadingMore = loadingMore
-            )
+        isLoadingMore,
+        errorState
+    ) { items, refreshing, loadingMore, error ->
+        when {
+            error != null && items.isEmpty() -> {
+                DiscoverUiState.Error(
+                    message = error.first,
+                    isNoInternet = error.second
+                )
+            }
+            items.isEmpty() -> {
+                DiscoverUiState.Loading
+            }
+            else -> {
+                DiscoverUiState.Success(
+                    items = items,
+                    isRefreshing = refreshing,
+                    isLoadingMore = loadingMore
+                )
+            }
         }
-    }.catch { emit(DiscoverUiState.Error(it.message ?: "Unknown Error")) }
-    .stateIn(
+    }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = DiscoverUiState.Loading
@@ -51,10 +65,11 @@ class CatsViewModel @Inject constructor(
     fun refresh() {
         viewModelScope.launch {
             isRefreshing.value = true
+            errorState.value = null
             try {
                 refreshMediaUseCase()
             } catch (e: Exception) {
-                // Error handled by the flow or could be emitted as a side effect
+                errorState.value = (e.message ?: "Failed to refresh") to (e is IOException)
             } finally {
                 isRefreshing.value = false
             }
