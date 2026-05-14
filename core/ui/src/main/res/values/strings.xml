@@ -19,6 +19,6 @@
     <string name="saved_to_gallery">Saved to gallery!</string>
     <string name="crop">Crop</string>
     <string name="retry">Retry</string>
-    <string name="error_message">Oops! Something went wrong.</string>
+    <string name="error_message">Failed to load. Please try again.</string>
     <string name="error_no_internet">No internet connection. Please check your network.</string>
 </resources>

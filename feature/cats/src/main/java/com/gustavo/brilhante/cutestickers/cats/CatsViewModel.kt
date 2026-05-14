@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.io.IOException
+import java.net.UnknownHostException
 import javax.inject.Inject
 
 @HiltViewModel
@@ -42,7 +42,8 @@ class CatsViewModel @Inject constructor(
             error != null && items.isEmpty() -> {
                 DiscoverUiState.Error(
                     message = error.first,
-                    isNoInternet = error.second
+                    isNoInternet = error.second,
+                    isRefreshing = refreshing
                 )
             }
             items.isEmpty() -> {
@@ -69,7 +70,7 @@ class CatsViewModel @Inject constructor(
             try {
                 refreshMediaUseCase()
             } catch (e: Exception) {
-                errorState.value = (e.message ?: "Failed to refresh") to (e is IOException)
+                errorState.value = (e.message ?: "Failed to refresh") to (e is UnknownHostException)
             } finally {
                 isRefreshing.value = false
             }

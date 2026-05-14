@@ -27,7 +27,9 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -82,7 +84,8 @@ sealed interface DiscoverUiState {
     ) : DiscoverUiState
     data class Error(
         val message: String,
-        val isNoInternet: Boolean = false
+        val isNoInternet: Boolean = false,
+        val isRefreshing: Boolean = false
     ) : DiscoverUiState
 }
 
@@ -208,39 +211,39 @@ fun DiscoverScreen(
                     }
                 }
                 is DiscoverUiState.Error -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
+                    PullToRefreshBox(
+                        isRefreshing = uiState.isRefreshing,
+                        onRefresh = onRefresh,
+                        modifier = Modifier.fillMaxSize()
                     ) {
-                        Icon(
-                            imageVector = if (uiState.isNoInternet) Icons.Default.CloudOff else Icons.Default.Refresh,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = if (uiState.isNoInternet) {
-                                stringResource(UiR.string.error_no_internet)
-                            } else {
-                                stringResource(UiR.string.error_message)
-                            },
-                            textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = uiState.message,
-                            textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Button(onClick = onRefresh) {
-                            Text(text = stringResource(UiR.string.retry))
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = if (uiState.isNoInternet) Icons.Default.CloudOff else Icons.Default.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = if (uiState.isNoInternet) {
+                                    stringResource(UiR.string.error_no_internet)
+                                } else {
+                                    stringResource(UiR.string.error_message)
+                                },
+                                textAlign = TextAlign.Center,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Button(onClick = onRefresh) {
+                                Text(text = stringResource(UiR.string.retry))
+                            }
                         }
                     }
                 }
