@@ -2,6 +2,8 @@ package com.gustavo.brilhante.cutestickers.mystickers.di
 
 import android.content.Context
 import androidx.room.Room
+import com.gustavo.brilhante.cutestickers.mystickers.CropImageProcessor
+import com.gustavo.brilhante.cutestickers.mystickers.data.CropImageProcessorImpl
 import com.gustavo.brilhante.cutestickers.mystickers.data.MyStickerDao
 import com.gustavo.brilhante.cutestickers.mystickers.data.MyStickerDatabase
 import com.gustavo.brilhante.cutestickers.mystickers.data.MyStickersRepositoryImpl
@@ -21,6 +23,9 @@ internal abstract class MyStickersModule {
     @Binds
     @Singleton
     abstract fun bindMyStickersRepository(impl: MyStickersRepositoryImpl): MyStickersRepository
+
+    @Binds
+    abstract fun bindCropImageProcessor(impl: CropImageProcessorImpl): CropImageProcessor
 
     companion object {
         @Provides

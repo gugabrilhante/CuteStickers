@@ -41,14 +41,14 @@ fun CuteStickersApp(
 ) {
     val items = remember {
         listOf(
+            Screen.MyStickers,
             Screen.Cats,
             Screen.Dogs,
-            Screen.MyStickers,
         )
     }
     val topLevelRoutes = remember(items) { items.toSet() }
     val navigationState = rememberNavigationState(
-        startRoute = Screen.Cats,
+        startRoute = Screen.MyStickers,
         topLevelRoutes = topLevelRoutes
     )
     val navigator = remember { Navigator(navigationState) }

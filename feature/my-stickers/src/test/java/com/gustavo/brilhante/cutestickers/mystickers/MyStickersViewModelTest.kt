@@ -25,6 +25,7 @@ import org.junit.Test
 class MyStickersViewModelTest {
 
     private val repository = mockk<MyStickersRepository>()
+    private val cropImageProcessor = mockk<CropImageProcessor>()
     private val stickersFlow = MutableStateFlow<List<MySticker>>(emptyList())
     private val testDispatcher = UnconfinedTestDispatcher()
 
@@ -34,7 +35,7 @@ class MyStickersViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         every { repository.getStickers() } returns stickersFlow
-        viewModel = MyStickersViewModel(repository)
+        viewModel = MyStickersViewModel(repository, cropImageProcessor)
     }
 
     @After

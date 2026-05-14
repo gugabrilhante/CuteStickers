@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.gustavo.brilhante.cutestickers.model.MediaItem
 import com.gustavo.brilhante.cutestickers.mystickers.domain.MySticker
 import com.gustavo.brilhante.cutestickers.mystickers.domain.MyStickersRepository
+import com.gustavo.brilhante.cutestickers.mystickers.CropImageProcessor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -28,7 +29,8 @@ sealed interface MyStickersUiState {
 
 @HiltViewModel
 class MyStickersViewModel @Inject constructor(
-    private val repository: MyStickersRepository
+    private val repository: MyStickersRepository,
+    val cropImageProcessor: CropImageProcessor
 ) : ViewModel() {
 
     private val isImporting = MutableStateFlow(false)

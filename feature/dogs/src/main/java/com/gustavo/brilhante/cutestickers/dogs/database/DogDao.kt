@@ -12,4 +12,7 @@ interface DogDao : BaseDao<DogEntity> {
 
     @Query("DELETE FROM dogs")
     suspend fun clearDogs()
+
+    @Query("SELECT COUNT(*) FROM dogs")
+    suspend fun getCount(): Int
 }

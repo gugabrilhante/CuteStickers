@@ -1,12 +1,10 @@
 package com.gustavo.brilhante.cutestickers.mystickers
 
-import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Matrix
 import android.net.Uri
-import androidx.exifinterface.media.ExifInterface
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -34,27 +32,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectTransformGestures
 import com.gustavo.brilhante.cutestickers.ui.R as UiR
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
 
 @Composable
 fun ImageCropScreen(
     sourceUri: Uri,
     onCropComplete: (Uri) -> Unit,
     onDismiss: () -> Unit,
-    context: Context = LocalContext.current
+    processor: CropImageProcessor
 ) {
     val scope = rememberCoroutineScope()
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -64,37 +55,7 @@ fun ImageCropScreen(
     var isCropping by remember { mutableStateOf(false) }
 
     LaunchedEffect(sourceUri) {
-        withContext(Dispatchers.IO) {
-            val inputStream = when {
-                sourceUri.scheme == "file" -> File(sourceUri.path!!).inputStream()
-                else -> context.contentResolver.openInputStream(sourceUri)
-            }
-            val loadedBitmap = inputStream?.use { BitmapFactory.decodeStream(it) }
-            
-            if (loadedBitmap != null) {
-                val exifStream = when {
-                    sourceUri.scheme == "file" -> File(sourceUri.path!!).inputStream()
-                    else -> context.contentResolver.openInputStream(sourceUri)
-                }
-                val exif = exifStream?.use { ExifInterface(it) }
-                val orientation = exif?.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
-                
-                val rotationDegrees = when (orientation) {
-                    ExifInterface.ORIENTATION_ROTATE_90 -> 90f
-                    ExifInterface.ORIENTATION_ROTATE_180 -> 180f
-                    ExifInterface.ORIENTATION_ROTATE_270 -> 270f
-                    else -> 0f
-                }
-                
-                if (rotationDegrees != 0f) {
-                    val matrix = Matrix().apply { postRotate(rotationDegrees) }
-                    bitmap = Bitmap.createBitmap(loadedBitmap, 0, 0, loadedBitmap.width, loadedBitmap.height, matrix, true)
-                    loadedBitmap.recycle()
-                } else {
-                    bitmap = loadedBitmap
-                }
-            }
-        }
+        bitmap = processor.loadBitmapWithExifCorrection(sourceUri)
     }
 
     Box(
@@ -111,7 +72,6 @@ fun ImageCropScreen(
                 val boxH = constraints.maxHeight.toFloat()
                 val cropSizePx = minOf(boxW, boxH) * 0.82f
 
-                // Scale image so the shorter side fills the crop window
                 val fitScale = run {
                     val rotatedW = if (rotation % 180 == 0f) bmp.width else bmp.height
                     val rotatedH = if (rotation % 180 == 0f) bmp.height else bmp.width
@@ -125,7 +85,6 @@ fun ImageCropScreen(
                             detectTransformGestures { _, pan, zoom, _ ->
                                 val newScale = (displayScale * zoom).coerceIn(0.5f, 8f)
                                 val totalScale = newScale * fitScale
-                                // Clamp so image never fully leaves the crop window
                                 val rotatedW = if (rotation % 180 == 0f) bmp.width else bmp.height
                                 val rotatedH = if (rotation % 180 == 0f) bmp.height else bmp.width
                                 val imgW = rotatedW * totalScale
@@ -151,10 +110,10 @@ fun ImageCropScreen(
                     drawContext.canvas.save()
                     drawContext.canvas.translate(imgLeft + imgW / 2f, imgTop + imgH / 2f)
                     drawContext.canvas.rotate(rotation)
-                    
+
                     val drawW = bmp.width * totalScale
                     val drawH = bmp.height * totalScale
-                    
+
                     drawImage(
                         image = bmp.asImageBitmap(),
                         dstOffset = IntOffset((-drawW / 2f).toInt(), (-drawH / 2f).toInt()),
@@ -186,7 +145,7 @@ fun ImageCropScreen(
                     OutlinedButton(onClick = onDismiss) {
                         Text(stringResource(UiR.string.cancel), color = Color.White)
                     }
-                    OutlinedButton(onClick = { 
+                    OutlinedButton(onClick = {
                         rotation = (rotation + 90f) % 360f
                         displayOffset = Offset.Zero
                     }) {
@@ -213,17 +172,8 @@ fun ImageCropScreen(
                                     rotatedW, rotatedH
                                 )
 
-                                val tempUri = withContext(Dispatchers.IO) {
-                                    val matrix = Matrix().apply { postRotate(rotation) }
-                                    val rotatedBmp = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, matrix, true)
-                                    val cropped = Bitmap.createBitmap(rotatedBmp, bmpX, bmpY, bmpSize, bmpSize)
-                                    val f = File(context.cacheDir, "crop_${System.currentTimeMillis()}.jpg")
-                                    FileOutputStream(f).use { cropped.compress(Bitmap.CompressFormat.JPEG, 95, it) }
-                                    if (rotatedBmp != bmp) rotatedBmp.recycle()
-                                    cropped.recycle()
-                                    Uri.fromFile(f)
-                                }
-                                onCropComplete(tempUri)
+                                val resultUri = processor.saveCroppedBitmap(bmp, bmpX, bmpY, bmpSize, rotation)
+                                onCropComplete(resultUri)
                             }
                         },
                         enabled = !isCropping,

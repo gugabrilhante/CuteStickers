@@ -47,22 +47,22 @@ class DogsViewModel @Inject constructor(
         errorState
     ) { items, refreshing, loadingMore, error ->
         when {
-            error != null && items.isEmpty() -> {
+            items.isNotEmpty() -> {
+                DiscoverUiState.Success(
+                    items = items,
+                    isRefreshing = refreshing,
+                    isLoadingMore = loadingMore
+                )
+            }
+            error != null -> {
                 DiscoverUiState.Error(
                     message = error.first,
                     isNoInternet = error.second,
                     isRefreshing = refreshing
                 )
             }
-            items.isEmpty() -> {
-                DiscoverUiState.Loading
-            }
             else -> {
-                DiscoverUiState.Success(
-                    items = items,
-                    isRefreshing = refreshing,
-                    isLoadingMore = loadingMore
-                )
+                DiscoverUiState.Loading
             }
         }
     }.stateIn(

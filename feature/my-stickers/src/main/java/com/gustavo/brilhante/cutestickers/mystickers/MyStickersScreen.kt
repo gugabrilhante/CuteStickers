@@ -120,6 +120,7 @@ fun MyStickersRoute(
     pendingCropUri?.let { uri ->
         ImageCropScreen(
             sourceUri = uri,
+            processor = viewModel.cropImageProcessor,
             onCropComplete = { croppedUri ->
                 pendingCropUri = null
                 viewModel.importFromGallery(croppedUri.toString())
@@ -200,17 +201,23 @@ fun MyStickersScreen(
                     )
                 }
 
-                ExtendedFloatingActionButton(
-                    onClick = onImportClick,
-                    icon = {
-                        Icon(
-                            Icons.Default.PhotoLibrary,
-                            contentDescription = stringResource(MyR.string.import_from_gallery)
-                        )
-                    },
-                    text = { Text(stringResource(MyR.string.add)) },
-                    modifier = Modifier.testTag("import_fab")
-                )
+                AnimatedVisibility(
+                    visible = uiState is MyStickersUiState.Success,
+                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+                ) {
+                    ExtendedFloatingActionButton(
+                        onClick = onImportClick,
+                        icon = {
+                            Icon(
+                                Icons.Default.PhotoLibrary,
+                                contentDescription = stringResource(MyR.string.import_from_gallery)
+                            )
+                        },
+                        text = { Text(stringResource(MyR.string.gallery)) },
+                        modifier = Modifier.testTag("import_fab")
+                    )
+                }
             }
         }
     ) { innerPadding ->

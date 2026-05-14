@@ -7,4 +7,5 @@ interface MediaLocalDataSource {
     fun getMedia(): Flow<List<MediaItem>>
     suspend fun insertAll(items: List<MediaItem>)
     suspend fun clear()
+    suspend fun isEmpty(): Boolean
 }

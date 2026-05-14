@@ -42,6 +42,7 @@ class MyStickersScreenTest {
 
         composeTestRule.onNodeWithTag("empty_title").assertIsDisplayed()
         composeTestRule.onNodeWithTag("import_button").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("import_fab").assertDoesNotExist()
     }
 
     @Test
@@ -161,7 +162,7 @@ class MyStickersScreenTest {
         }
 
         composeTestRule.onNodeWithTag("import_fab").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Add").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Gallery").assertIsDisplayed()
     }
 
     @Test

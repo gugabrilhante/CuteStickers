@@ -12,4 +12,7 @@ interface CatDao : BaseDao<CatEntity> {
 
     @Query("DELETE FROM cats")
     suspend fun clearCats()
+
+    @Query("SELECT COUNT(*) FROM cats")
+    suspend fun getCount(): Int
 }

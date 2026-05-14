@@ -20,4 +20,6 @@ class CatLocalDataSource @Inject constructor(
     override suspend fun clear() {
         catDao.clearCats()
     }
+
+    override suspend fun isEmpty(): Boolean = catDao.getCount() == 0
 }
