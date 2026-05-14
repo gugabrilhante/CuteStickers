@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="my_stickers">Mis stickers</string>
+    <string name="import_from_gallery">Importar de la galería</string>
+    <string name="empty_description">Guarda stickers de la aplicación o importa imágenes de tu galería</string>
+    <string name="tap_to_send">Toca para usar como sticker</string>
+    <string name="save_to_my_stickers">Guardar en Mis stickers</string>
+    <string name="saved_to_my_stickers">¡Guardado en Mis stickers!</string>
+    <string name="delete_selected">Eliminar seleccionados</string>
+    <string name="add">Añadir</string>
+</resources>

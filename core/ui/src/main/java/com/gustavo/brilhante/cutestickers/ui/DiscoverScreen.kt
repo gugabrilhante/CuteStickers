@@ -1,5 +1,6 @@
 package com.gustavo.brilhante.cutestickers.ui
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -9,17 +10,24 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -52,15 +60,18 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -105,10 +116,13 @@ fun DiscoverScreen(
     showOnboarding: Boolean,
     onOnboardingDismissed: () -> Unit,
     title: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    selectedIds: Set<String> = emptySet(),
+    onItemLongClick: (MediaItem) -> Unit = {},
+    onSaveSelectionToMyStickers: () -> Unit = {}
 ) {
     val gridState = rememberLazyGridState()
-    
+
     val shouldLoadMore = remember {
         derivedStateOf {
             val totalItemsCount = gridState.layoutInfo.totalItemsCount
@@ -136,13 +150,19 @@ fun DiscoverScreen(
         )
     }
 
+    val isRefreshing = when (uiState) {
+        is DiscoverUiState.Success -> uiState.isRefreshing
+        is DiscoverUiState.Error -> uiState.isRefreshing
+        else -> false
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(title) },
                 actions = {
                     IconButton(onClick = onAboutClick) {
-                        Icon(imageVector = Icons.Default.Info, contentDescription = "About")
+                        Icon(imageVector = Icons.Default.Info, contentDescription = stringResource(UiR.string.about))
                     }
                 },
                 windowInsets = WindowInsets(0, 0, 0, 0),
@@ -151,6 +171,22 @@ fun DiscoverScreen(
                     scrolledContainerColor = MaterialTheme.colorScheme.background
                 )
             )
+        },
+        floatingActionButton = {
+            AnimatedVisibility(
+                visible = selectedIds.isNotEmpty() && !isRefreshing,
+                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+            ) {
+                ExtendedFloatingActionButton(
+                    onClick = onSaveSelectionToMyStickers,
+                    icon = { Icon(Icons.Default.Star, contentDescription = null) },
+                    text = { Text(stringResource(UiR.string.save_selection)) },
+                    modifier = Modifier
+                        .testTag("save_selection_fab")
+                        .offset(y = 20.dp)
+                )
+            }
         }
     ) { innerPadding ->
         Box(
@@ -166,7 +202,7 @@ fun DiscoverScreen(
                             start = 8.dp,
                             end = 8.dp,
                             top = 8.dp,
-                            bottom = innerPadding.calculateBottomPadding() + 8.dp
+                            bottom = innerPadding.calculateBottomPadding() + 60.dp
                         ),
                         modifier = Modifier.fillMaxSize()
                     ) {
@@ -196,6 +232,8 @@ fun DiscoverScreen(
                                 MediaCard(
                                     item = item,
                                     onItemClick = onItemClick,
+                                    onItemLongClick = onItemLongClick,
+                                    isSelected = item.id in selectedIds,
                                     sharedTransitionScope = sharedTransitionScope,
                                     animatedVisibilityScope = animatedVisibilityScope,
                                     badgeText = badgeText,
@@ -260,7 +298,9 @@ fun MediaCard(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     badgeText: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSelected: Boolean = false,
+    onItemLongClick: (MediaItem) -> Unit = {}
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -270,7 +310,6 @@ fun MediaCard(
     )
 
     Card(
-        onClick = { onItemClick(item) },
         modifier = modifier
             .padding(8.dp)
             .fillMaxWidth()
@@ -278,11 +317,19 @@ fun MediaCard(
             .scale(scale)
             .testTag("media_card"),
         shape = RoundedCornerShape(16.dp),
-        interactionSource = interactionSource,
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         with(sharedTransitionScope) {
-            Box {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .combinedClickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        onClick = { onItemClick(item) },
+                        onLongClick = { onItemLongClick(item) }
+                    )
+            ) {
                 SubcomposeAsyncImage(
                     model = item.url,
                     contentDescription = null,
@@ -298,8 +345,7 @@ fun MediaCard(
                         ShimmerBox()
                     }
                 )
-                
-                // Badge "Tap to create sticker"
+
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -332,6 +378,22 @@ fun MediaCard(
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold
                     )
+                }
+
+                if (isSelected) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
                 }
             }
         }

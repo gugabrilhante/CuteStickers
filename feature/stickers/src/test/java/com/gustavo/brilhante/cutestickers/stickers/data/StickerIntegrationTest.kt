@@ -85,5 +85,6 @@ internal class StickerIntegrationTest {
         override fun loadAllPacks(): List<StickerPackInfo> = packs.values.toList()
         override fun loadStickers(packId: String): List<StickerInfo> = packs[packId]?.stickers ?: emptyList()
         override fun getStickerFile(packId: String, fileName: String): File = File("fake/$packId/$fileName")
+        override fun migrateIfNeeded() {}
     }
 }

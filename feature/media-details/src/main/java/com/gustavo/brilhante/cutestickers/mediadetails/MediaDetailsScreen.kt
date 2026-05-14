@@ -129,6 +129,22 @@ fun MediaDetailsRoute(
         }
     }
 
+    val saveToMyStickersMessage = stringResource(UiR.string.saved_to_my_stickers)
+
+    LaunchedEffect(uiState.saveToMyStickersState) {
+        when (val state = uiState.saveToMyStickersState) {
+            is SaveToMyStickersState.Success -> {
+                snackbarHostState.showSnackbar(saveToMyStickersMessage)
+                viewModel.dismissSaveToMyStickers()
+            }
+            is SaveToMyStickersState.Error -> {
+                snackbarHostState.showSnackbar(state.message)
+                viewModel.dismissSaveToMyStickers()
+            }
+            else -> Unit
+        }
+    }
+
     MediaDetailsScreen(
         uiState = uiState,
         snackbarHostState = snackbarHostState,
@@ -139,7 +155,8 @@ fun MediaDetailsRoute(
         onDownload = onDownloadClick,
         onConfirmExport = viewModel::onConfirmExport,
         onDismissStickerSheet = viewModel::dismissStickerSheet,
-        onToggleCrop = viewModel::onToggleCrop
+        onToggleCrop = viewModel::onToggleCrop,
+        onSaveToMyStickers = viewModel::saveToMyStickers
     )
 }
 
@@ -156,7 +173,8 @@ fun MediaDetailsScreen(
     modifier: Modifier = Modifier,
     onConfirmExport: (StickerPack) -> Unit = {},
     onDismissStickerSheet: () -> Unit = {},
-    onToggleCrop: () -> Unit = {}
+    onToggleCrop: () -> Unit = {},
+    onSaveToMyStickers: () -> Unit = {}
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -293,6 +311,24 @@ fun MediaDetailsScreen(
                             )
                         } else {
                             Text(stringResource(UiR.string.download))
+                        }
+                    }
+                }
+
+                if (!uiState.isLocalMedia) {
+                    OutlinedButton(
+                        onClick = onSaveToMyStickers,
+                        enabled = uiState.saveToMyStickersState !is SaveToMyStickersState.Loading,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 12.dp)
+                            .testTag("save_to_my_stickers_button")
+                    ) {
+                        if (uiState.saveToMyStickersState is SaveToMyStickersState.Loading) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text(stringResource(UiR.string.save_to_my_stickers))
                         }
                     }
                 }

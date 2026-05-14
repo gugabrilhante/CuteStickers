@@ -9,6 +9,8 @@ sealed interface Screen : NavKey {
     data object Cats : Screen
     @Serializable
     data object Dogs : Screen
+    @Serializable
+    data object MyStickers : Screen
 
     @Serializable
     data object About : Screen

@@ -37,7 +37,7 @@ dependencies {
     implementation(platform(bom))
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.core)
-    implementation("androidx.compose.material:material-icons-extended")
+    implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.animation)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.coil.compose)

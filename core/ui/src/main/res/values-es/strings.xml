@@ -21,4 +21,10 @@
     <string name="retry">Reintentar</string>
     <string name="error_message">No se pudo cargar.</string>
     <string name="error_no_internet">Sin conexión a internet. Por favor, comprueba tu red.</string>
+    <string name="save_selection">Guardar</string>
+    <string name="selected_count">%1$d seleccionados</string>
+    <string name="cancel">Cancelar</string>
+    <string name="rotate">Girar</string>
+    <string name="delete">Eliminar</string>
+    <string name="clear_selection">Limpiar selección</string>
 </resources>

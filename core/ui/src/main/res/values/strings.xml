@@ -21,4 +21,12 @@
     <string name="retry">Retry</string>
     <string name="error_message">Failed to load. Please try again.</string>
     <string name="error_no_internet">No internet connection. Please check your network.</string>
+    <string name="saved_to_my_stickers">Saved to My Stickers!</string>
+    <string name="save_to_my_stickers">Save to My Stickers</string>
+    <string name="save_selection">Save</string>
+    <string name="selected_count">%1$d selected</string>
+    <string name="cancel">Cancel</string>
+    <string name="rotate">Rotate</string>
+    <string name="delete">Delete</string>
+    <string name="clear_selection">Clear selection</string>
 </resources>

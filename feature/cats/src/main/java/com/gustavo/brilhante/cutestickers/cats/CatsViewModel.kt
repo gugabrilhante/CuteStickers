@@ -6,13 +6,18 @@ import com.gustavo.brilhante.cutestickers.common.network.CatsApi
 import com.gustavo.brilhante.cutestickers.domain.usecase.GetCachedMediaUseCase
 import com.gustavo.brilhante.cutestickers.domain.usecase.LoadNextPageUseCase
 import com.gustavo.brilhante.cutestickers.domain.usecase.RefreshMediaUseCase
+import com.gustavo.brilhante.cutestickers.model.MediaItem
+import com.gustavo.brilhante.cutestickers.mystickers.domain.MyStickersRepository
 import com.gustavo.brilhante.cutestickers.ui.DiscoverUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.net.UnknownHostException
 import javax.inject.Inject
@@ -21,12 +26,15 @@ import javax.inject.Inject
 class CatsViewModel @Inject constructor(
     @CatsApi private val getCachedMediaUseCase: GetCachedMediaUseCase,
     @CatsApi private val refreshMediaUseCase: RefreshMediaUseCase,
-    @CatsApi private val loadNextPageUseCase: LoadNextPageUseCase
+    @CatsApi private val loadNextPageUseCase: LoadNextPageUseCase,
+    private val myStickersRepository: MyStickersRepository
 ) : ViewModel() {
 
     private val isRefreshing = MutableStateFlow(false)
     private val isLoadingMore = MutableStateFlow(false)
     private val errorState = MutableStateFlow<Pair<String, Boolean>?>(null)
+    private val _selectedIds = MutableStateFlow<Set<String>>(emptySet())
+    val selectedIds: StateFlow<Set<String>> = _selectedIds.asStateFlow()
 
     init {
         refresh()
@@ -67,6 +75,7 @@ class CatsViewModel @Inject constructor(
         viewModelScope.launch {
             isRefreshing.value = true
             errorState.value = null
+            clearSelection()
             try {
                 refreshMediaUseCase()
             } catch (e: Exception) {
@@ -88,6 +97,27 @@ class CatsViewModel @Inject constructor(
             } finally {
                 isLoadingMore.value = false
             }
+        }
+    }
+
+    fun toggleSelection(item: MediaItem) {
+        _selectedIds.update { current ->
+            if (item.id in current) current - item.id else current + item.id
+        }
+    }
+
+    fun clearSelection() {
+        _selectedIds.value = emptySet()
+    }
+
+    fun saveSelectionToMyStickers() {
+        val selectedCopy = _selectedIds.value.toSet()
+        if (selectedCopy.isEmpty()) return
+        clearSelection()
+        viewModelScope.launch {
+            getCachedMediaUseCase().first()
+                .filter { it.id in selectedCopy }
+                .forEach { item -> myStickersRepository.saveFromUrl(item.url, item.id) }
         }
     }
 }

@@ -29,12 +29,18 @@ fun DogsRoute(
     viewModel: DogsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
     val onboardingShown by preferencesManager.isOnboardingShown.collectAsState(initial = true)
     val scope = rememberCoroutineScope()
 
     DiscoverScreen(
         uiState = uiState,
-        onItemClick = onItemClick,
+        selectedIds = selectedIds,
+        onItemClick = { item ->
+            if (selectedIds.isNotEmpty()) viewModel.toggleSelection(item) else onItemClick(item)
+        },
+        onItemLongClick = viewModel::toggleSelection,
+        onSaveSelectionToMyStickers = viewModel::saveSelectionToMyStickers,
         onRefresh = viewModel::refresh,
         onLoadMore = viewModel::loadMore,
         onAboutClick = onAboutClick,

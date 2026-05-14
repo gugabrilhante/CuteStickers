@@ -50,6 +50,7 @@ dependencies {
     implementation(project(":feature:dogs"))
     implementation(project(":feature:media-details"))
     implementation(project(":feature:stickers"))
+    implementation(project(":feature:my-stickers"))
     implementation(project(":core:designsystem"))
     implementation(project(":core:ui"))
     implementation(project(":core:common"))
