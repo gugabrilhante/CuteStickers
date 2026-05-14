@@ -1,62 +1,72 @@
-name: Coverage Report
-
+name: Coverage
 on:
-  workflow_run:
-    workflows: ["Unit Tests", "UI Tests"]
-    types:
-      - completed
-
+  pull_request:
+    branches: [ master ]
+  push:
+    branches: [ master ]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   coverage:
-    name: Generate and Upload Coverage
+    name: Generate coverage report
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Compile Debug Classes
-        run: ./gradlew compileDebugKotlin --parallel
-
-      - name: Download Execution Data
-        uses: actions/download-artifact@v4
-        with:
-          pattern: '*-exec'
-          merge-multiple: true
-          path: coverage-data
-          run-id: ${{ github.event.workflow_run.id }}
-
-      - name: Generate Aggregated Report
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Enable KVM group permissions
         run: |
-          ./gradlew jacocoTestReport --stacktrace
-          if [ ! -f build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml ]; then
-            echo "Error: JaCoCo XML report not found!"
-            ls -R build/reports
-            exit 1
-          fi
-
-      - name: Upload to Codecov
-        uses: codecov/codecov-action@v4
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | \
+            sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Clean build artifacts
+        run: ./gradlew clean --stacktrace
+      - name: Run unit tests with coverage
+        run: ./gradlew testDebugUnitTest --stacktrace
+      - name: Run instrumented tests on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        timeout-minutes: 60
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_6
+          target: google_apis
+          avd-name: test_avd
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -memory 4096
+          disable-animations: true
+          script: ./gradlew connectedDebugAndroidTest --stacktrace
+      - name: Generate merged coverage report
+        run: ./gradlew jacocoTestReport --rerun-tasks --stacktrace
+      - name: Debug — verify coverage artifacts exist
+        if: always()
+        run: |
+          echo "--- .exec files (unit tests) ---"
+          find . -name "*.exec" | grep -v ".gradle" | sort || echo "NONE FOUND"
+          echo "--- .ec files (instrumented tests) ---"
+          find . -name "*.ec" | grep -v ".gradle" | sort || echo "NONE FOUND"
+          echo "--- JaCoCo XML ---"
+          find . -type f -name "*.xml" | grep -i jacoco | sort || echo "NONE FOUND"
+          REPORT="build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml"
+          [ -f "$REPORT" ] && wc -l "$REPORT" || echo "ERROR: report not found"
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
         with:
           files: build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml
-          token: ${{ secrets.CODECOV_TOKEN }}
-          flags: ${{ contains(github.event.workflow_run.name, 'Unit') && 'unittests' || 'uitests' }}
-          name: codecov-umbrella
           fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
+      - name: Upload HTML coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-html
+          path: build/reports/jacoco/jacocoTestReport/html/
+          retention-days: 14
