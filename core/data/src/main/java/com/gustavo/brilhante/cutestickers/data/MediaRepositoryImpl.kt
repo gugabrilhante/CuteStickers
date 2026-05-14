@@ -26,11 +26,6 @@ class MediaRepositoryImpl(
     private val PAGINATION_LIMIT = 4
 
     override fun getMedia(): Flow<List<MediaItem>> = localDataSource.getMedia()
-        .onStart {
-            if (shouldRefreshCache()) {
-                refresh()
-            }
-        }
 
     override suspend fun refresh(): Unit = withContext(ioDispatcher) {
         val remoteItems = mediaService.getMedia(limit = 20)

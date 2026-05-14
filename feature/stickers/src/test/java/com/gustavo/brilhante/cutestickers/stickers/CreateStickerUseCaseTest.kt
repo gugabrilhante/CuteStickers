@@ -28,14 +28,14 @@ class CreateStickerUseCaseTest {
             stickers = listOf(StickerItem("abc.webp", listOf("😊"))),
             isAnimated = true
         )
-        coEvery { repository.createStickerFromUrl("https://img.com/cat.jpg", "abc", MediaType.Static) } returns
+        coEvery { repository.createStickerFromUrl("https://img.com/cat.jpg", "abc", MediaType.Static, any()) } returns
             Result.success(expected)
 
         val result = useCase("https://img.com/cat.jpg", "abc", MediaType.Static)
 
         assertTrue(result.isSuccess)
         assertEquals(expected, result.getOrNull())
-        coVerify(exactly = 1) { repository.createStickerFromUrl("https://img.com/cat.jpg", "abc", MediaType.Static) }
+        coVerify(exactly = 1) { repository.createStickerFromUrl("https://img.com/cat.jpg", "abc", MediaType.Static, any()) }
     }
 
     @Test
@@ -48,19 +48,19 @@ class CreateStickerUseCaseTest {
             stickers = listOf(StickerItem("abc.webp", listOf("😊"))),
             isAnimated = true
         )
-        coEvery { repository.createStickerFromUrl("https://img.com/cat.gif", "abc", MediaType.Animated) } returns
+        coEvery { repository.createStickerFromUrl("https://img.com/cat.gif", "abc", MediaType.Animated, any()) } returns
             Result.success(expected)
 
         val result = useCase("https://img.com/cat.gif", "abc", MediaType.Animated)
 
         assertTrue(result.isSuccess)
-        coVerify(exactly = 1) { repository.createStickerFromUrl("https://img.com/cat.gif", "abc", MediaType.Animated) }
+        coVerify(exactly = 1) { repository.createStickerFromUrl("https://img.com/cat.gif", "abc", MediaType.Animated, any()) }
     }
 
     @Test
     fun `invoke returns failure when repository throws`() = runTest {
         val error = RuntimeException("Network error")
-        coEvery { repository.createStickerFromUrl(any(), any(), any()) } returns Result.failure(error)
+        coEvery { repository.createStickerFromUrl(any(), any(), any(), any()) } returns Result.failure(error)
 
         val result = useCase("https://img.com/cat.jpg", "abc", MediaType.Static)
 
@@ -71,7 +71,7 @@ class CreateStickerUseCaseTest {
     @Test
     fun `invoke propagates exact error from repository`() = runTest {
         val error = IllegalStateException("Storage full")
-        coEvery { repository.createStickerFromUrl(any(), any(), any()) } returns Result.failure(error)
+        coEvery { repository.createStickerFromUrl(any(), any(), any(), any()) } returns Result.failure(error)
 
         val result = useCase("url", "id", MediaType.Static)
 

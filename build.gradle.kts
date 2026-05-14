@@ -37,6 +37,18 @@ val jacocoExclusions = listOf(
     "**/*_Impl.*",
     "**/Dagger*.*",
     "**/*_LifecycleAdapter.*",
+    "**/*_ViewBinding*.*",
+    "**/*_ViewBinder*.*",
+    "**/*_GeneratedInstaller*.*",
+    "**/BR.class",
+    "**/DataBindingInfo.class",
+    "**/DataBinderMapperImpl.class",
+    "**/DataBinderMapperImpl\$*.class",
+    "**/*Args*.*",
+    "**/*Directions*.*",
+    "**/*_Provide*.*",
+    "**/*_Inject*.*",
+    "**/*_Module*.*"
 )
 
 // Apply jacoco only to the pure-JVM :core:model module — safe because it has
@@ -56,54 +68,85 @@ tasks.register<JacocoReport>("jacocoTestReport") {
     group = "verification"
     description = "Generates aggregated JaCoCo coverage report for all modules."
 
+    // Explicitly declare dependencies on all tasks whose outputs are consumed by this
+    // report, as required by Gradle 9.x strict task-dependency validation.
+    subprojects.forEach { proj ->
+        // Declare that we MUST run after connected tests IF they are in the task graph,
+        // but don't force them to run if they weren't requested.
+        mustRunAfter(proj.tasks.matching { it.name == "connectedDebugAndroidTest" })
+
+        dependsOn(proj.tasks.matching {
+            it.name == "compileDebugKotlin" ||
+            it.name == "compileDebugJavaWithJavac" ||
+            it.name == "compileKotlin" ||
+            it.name == "compileJava" ||
+            it.name == "testDebugUnitTest" ||
+            (it.name == "test" && !proj.plugins.hasPlugin("com.android.library") && !proj.plugins.hasPlugin("com.android.application"))
+        })
+    }
+
     reports {
         xml.required.set(true)
         xml.outputLocation.set(
-            file("${layout.buildDirectory.get()}/reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
+            layout.buildDirectory.file("reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
         )
         html.required.set(true)
         html.outputLocation.set(
-            file("${layout.buildDirectory.get()}/reports/jacoco/jacocoTestReport/html")
+            layout.buildDirectory.dir("reports/jacoco/jacocoTestReport/html")
         )
     }
 
     classDirectories.setFrom(
-        files(
-            subprojects.flatMap { proj ->
-                listOf(
-                    // Android modules: Kotlin classes
-                    fileTree("${proj.layout.buildDirectory.get()}/tmp/kotlin-classes/debug") {
-                        exclude(jacocoExclusions)
-                    },
-                    // Android modules: Java classes
-                    fileTree("${proj.layout.buildDirectory.get()}/intermediates/javac/debug/classes") {
-                        exclude(jacocoExclusions)
-                    },
-                    // Pure JVM module (:core:model)
-                    fileTree("${proj.layout.buildDirectory.get()}/classes/kotlin/main") {
-                        exclude(jacocoExclusions)
-                    },
-                )
-            }
-        )
+        subprojects.flatMap { proj ->
+            listOf(
+                // Android modules: Kotlin classes
+                proj.fileTree(proj.layout.buildDirectory.dir("tmp/kotlin-classes/debug")) {
+                    exclude(jacocoExclusions)
+                },
+                // Android modules: Java classes
+                proj.fileTree(proj.layout.buildDirectory.dir("intermediates/javac/debug/classes")) {
+                    exclude(jacocoExclusions)
+                },
+                // Pure JVM module (:core:model)
+                proj.fileTree(proj.layout.buildDirectory.dir("classes/kotlin/main")) {
+                    exclude(jacocoExclusions)
+                },
+            )
+        }
     )
 
     sourceDirectories.setFrom(
-        files(
-            subprojects.flatMap { proj ->
-                listOf("src/main/java", "src/main/kotlin").map { "${proj.projectDir}/$it" }
-            }
-        )
+        subprojects.flatMap { proj ->
+            listOf("src/main/java", "src/main/kotlin").map { proj.projectDir.resolve(it) }
+        }
     )
 
     // AGP's enableUnitTestCoverage writes exec files here (AGP 7+ / 8.x / 9.x).
-    executionData.setFrom(
-        subprojects.map { proj ->
-            fileTree(proj.layout.buildDirectory.map { it.asFile }) {
-                include("outputs/unit_test_code_coverage/**/*.exec")
-                include("outputs/code_coverage/**/*.ec")
-                include("jacoco/*.exec") // For JVM modules like :core:model
+    // Use a Callable to avoid automatic task dependencies on connected tests
+    // when we only want to collect existing results during execution.
+    executionData.setFrom(files(java.util.concurrent.Callable {
+        val allExecFiles = mutableListOf<File>()
+        subprojects.forEach { proj ->
+            val buildDir = proj.layout.buildDirectory.asFile.get()
+            val possibleDirs = listOf(
+                File(buildDir, "outputs/unit_test_code_coverage"),
+                File(buildDir, "outputs/code_coverage"),
+                File(buildDir, "outputs/connected_android_test_code_coverage"),
+                File(buildDir, "jacoco")
+            )
+            possibleDirs.filter { it.exists() }.forEach { dir ->
+                dir.walkTopDown().filter { it.extension == "exec" || it.extension == "ec" }.forEach {
+                    allExecFiles.add(it)
+                }
             }
         }
-    )
+        // Also look in a root 'coverage-data' directory (useful for CI artifacts)
+        val ciDataDir = file("coverage-data")
+        if (ciDataDir.exists()) {
+            ciDataDir.walkTopDown().filter { it.extension == "exec" || it.extension == "ec" }.forEach {
+                allExecFiles.add(it)
+            }
+        }
+        allExecFiles
+    }))
 }

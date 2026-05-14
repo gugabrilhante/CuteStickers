@@ -25,6 +25,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -126,7 +128,8 @@ fun MediaDetailsRoute(
         onAddToWhatsApp = viewModel::onAddToWhatsApp,
         onDownload = onDownloadClick,
         onConfirmExport = viewModel::onConfirmExport,
-        onDismissStickerSheet = viewModel::dismissStickerSheet
+        onDismissStickerSheet = viewModel::dismissStickerSheet,
+        onToggleCrop = viewModel::onToggleCrop
     )
 }
 
@@ -143,6 +146,7 @@ fun MediaDetailsScreen(
     modifier: Modifier = Modifier,
     onConfirmExport: (StickerPack) -> Unit = {},
     onDismissStickerSheet: () -> Unit = {},
+    onToggleCrop: () -> Unit = {}
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -205,20 +209,39 @@ fun MediaDetailsScreen(
                             )
                             .clip(RoundedCornerShape(0.dp))
                             .testTag("hero_image"),
-                        contentScale = ContentScale.Crop
+                        contentScale = if (uiState.isCropped) ContentScale.Crop else ContentScale.Fit
                     )
-                    if (uiState.mediaType is com.gustavo.brilhante.cutestickers.model.MediaType.Animated) {
-                        Text(
-                            text = stringResource(UiR.string.gif),
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(16.dp)
-                                .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold
+                    
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = uiState.isCropped,
+                            onClick = onToggleCrop,
+                            label = { Text(stringResource(UiR.string.crop)) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = Color.Black.copy(alpha = 0.4f),
+                                labelColor = Color.White,
+                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
                         )
+
+                        if (uiState.mediaType is com.gustavo.brilhante.cutestickers.model.MediaType.Animated) {
+                            Text(
+                                text = stringResource(UiR.string.gif),
+                                modifier = Modifier
+                                    .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                color = Color.White,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
 

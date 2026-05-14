@@ -39,7 +39,8 @@ data class MediaDetailsUiState(
     val mediaId: String = "",
     val mediaType: MediaType = MediaType.Static,
     val stickerState: StickerState = StickerState.Idle,
-    val downloadState: DownloadState = DownloadState.Idle
+    val downloadState: DownloadState = DownloadState.Idle,
+    val isCropped: Boolean = true
 )
 
 sealed interface MediaDetailsEvent {
@@ -65,12 +66,16 @@ class MediaDetailsViewModel @Inject constructor(
         _uiState.update { it.copy(imageUrl = imageUrl, mediaId = mediaId, mediaType = type) }
     }
 
+    fun onToggleCrop() {
+        _uiState.update { it.copy(isCropped = !it.isCropped) }
+    }
+
     fun onAddToWhatsApp() {
         val state = _uiState.value
         if (state.stickerState is StickerState.Loading) return
         _uiState.update { it.copy(stickerState = StickerState.Loading) }
         viewModelScope.launch {
-            createStickerUseCase(state.imageUrl, state.mediaId, state.mediaType)
+            createStickerUseCase(state.imageUrl, state.mediaId, state.mediaType, state.isCropped)
                 .onSuccess { pack ->
                     _uiState.update { it.copy(stickerState = StickerState.Success(pack)) }
                 }
