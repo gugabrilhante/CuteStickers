@@ -58,6 +58,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
 import androidx.compose.animation.core.animateFloatAsState
@@ -77,9 +78,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -92,7 +96,8 @@ sealed interface DiscoverUiState {
     data class Success(
         val items: List<MediaItem>,
         val isRefreshing: Boolean = false,
-        val isLoadingMore: Boolean = false
+        val isLoadingMore: Boolean = false,
+        val isOffline: Boolean = false
     ) : DiscoverUiState
     data class Error(
         val message: String,
@@ -121,7 +126,8 @@ fun DiscoverScreen(
     selectedIds: Set<String> = emptySet(),
     onItemLongClick: (MediaItem) -> Unit = {},
     onClearSelection: () -> Unit = {},
-    onSaveSelectionToMyStickers: () -> Unit = {}
+    onSaveSelectionToMyStickers: () -> Unit = {},
+    offlinePlaceholderRes: Int = 0
 ) {
     val gridState = rememberLazyGridState()
 
@@ -162,21 +168,41 @@ fun DiscoverScreen(
         else -> false
     }
 
+    val isOffline = uiState is DiscoverUiState.Success && uiState.isOffline
+
+    LaunchedEffect(isOffline) {
+        if (!isOffline && uiState is DiscoverUiState.Success) {
+            onRefresh()
+        }
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(title) },
-                actions = {
-                    IconButton(onClick = onAboutClick) {
-                        Icon(imageVector = Icons.Default.Info, contentDescription = stringResource(UiR.string.about))
-                    }
-                },
-                windowInsets = WindowInsets(0, 0, 0, 0),
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    scrolledContainerColor = MaterialTheme.colorScheme.background
+            Column {
+                TopAppBar(
+                    title = { Text(title) },
+                    actions = {
+                        IconButton(onClick = onAboutClick) {
+                            Icon(imageVector = Icons.Default.Info, contentDescription = stringResource(UiR.string.about))
+                        }
+                    },
+                    windowInsets = WindowInsets(0, 0, 0, 0),
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        scrolledContainerColor = MaterialTheme.colorScheme.background
+                    )
                 )
-            )
+                AnimatedVisibility(
+                    visible = isOffline,
+                    enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+                    exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut()
+                ) {
+                    OfflineBanner(
+                        text = stringResource(UiR.string.offline_banner),
+                        modifier = Modifier.testTag("offline_banner")
+                    )
+                }
+            }
         },
         floatingActionButton = {
             AnimatedVisibility(
@@ -243,6 +269,7 @@ fun DiscoverScreen(
                                     sharedTransitionScope = sharedTransitionScope,
                                     animatedVisibilityScope = animatedVisibilityScope,
                                     badgeText = badgeText,
+                                    offlinePlaceholderRes = offlinePlaceholderRes,
                                     modifier = Modifier.animateItem()
                                 )
                             }
@@ -306,7 +333,8 @@ fun MediaCard(
     badgeText: String,
     modifier: Modifier = Modifier,
     isSelected: Boolean = false,
-    onItemLongClick: (MediaItem) -> Unit = {}
+    onItemLongClick: (MediaItem) -> Unit = {},
+    offlinePlaceholderRes: Int = 0
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -314,6 +342,8 @@ fun MediaCard(
         targetValue = if (isPressed) 0.95f else 1f,
         label = "scale_animation"
     )
+
+    var isLoaded by remember { mutableStateOf(false) }
 
     Card(
         modifier = modifier
@@ -332,6 +362,7 @@ fun MediaCard(
                     .combinedClickable(
                         interactionSource = interactionSource,
                         indication = null,
+                        enabled = isLoaded,
                         onClick = { onItemClick(item) },
                         onLongClick = { onItemLongClick(item) }
                     )
@@ -349,41 +380,50 @@ fun MediaCard(
                     contentScale = ContentScale.Crop,
                     loading = {
                         ShimmerBox()
+                    },
+                    onSuccess = {
+                        isLoaded = true
+                    },
+                    error = {
+                        isLoaded = false
+                        OfflineImagePlaceholder(offlinePlaceholderRes)
                     }
                 )
 
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
-                            )
-                        )
-                        .padding(top = 16.dp, bottom = 4.dp)
-                ) {
-                    Text(
-                        text = badgeText,
-                        modifier = Modifier.align(Alignment.Center),
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-
-                if (item.type is com.gustavo.brilhante.cutestickers.model.MediaType.Animated) {
-                    Text(
-                        text = stringResource(UiR.string.gif),
+                if (isLoaded) {
+                    Box(
                         modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(8.dp)
-                            .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold
-                    )
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
+                                )
+                            )
+                            .padding(top = 16.dp, bottom = 4.dp)
+                    ) {
+                        Text(
+                            text = badgeText,
+                            modifier = Modifier.align(Alignment.Center),
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    if (item.type is com.gustavo.brilhante.cutestickers.model.MediaType.Animated) {
+                        Text(
+                            text = stringResource(UiR.string.gif),
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(8.dp)
+                                .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
 
                 if (isSelected) {
@@ -417,6 +457,51 @@ fun ShimmerItem() {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         ShimmerBox()
+    }
+}
+
+@Composable
+fun OfflineBanner(text: String, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.errorContainer
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.CloudOff,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.size(16.dp)
+            )
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+        }
+    }
+}
+
+@Composable
+fun OfflineImagePlaceholder(placeholderRes: Int, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center
+    ) {
+        if (placeholderRes != 0) {
+            Icon(
+                painter = painterResource(placeholderRes),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(48.dp)
+            )
+        }
     }
 }
 

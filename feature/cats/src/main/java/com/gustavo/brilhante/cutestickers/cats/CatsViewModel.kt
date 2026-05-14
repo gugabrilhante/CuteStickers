@@ -3,6 +3,7 @@ package com.gustavo.brilhante.cutestickers.cats
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gustavo.brilhante.cutestickers.common.network.CatsApi
+import com.gustavo.brilhante.cutestickers.common.network.NetworkMonitor
 import com.gustavo.brilhante.cutestickers.domain.usecase.GetCachedMediaUseCase
 import com.gustavo.brilhante.cutestickers.domain.usecase.LoadNextPageUseCase
 import com.gustavo.brilhante.cutestickers.domain.usecase.RefreshMediaUseCase
@@ -27,7 +28,8 @@ class CatsViewModel @Inject constructor(
     @CatsApi private val getCachedMediaUseCase: GetCachedMediaUseCase,
     @CatsApi private val refreshMediaUseCase: RefreshMediaUseCase,
     @CatsApi private val loadNextPageUseCase: LoadNextPageUseCase,
-    private val myStickersRepository: MyStickersRepository
+    private val myStickersRepository: MyStickersRepository,
+    private val networkMonitor: NetworkMonitor
 ) : ViewModel() {
 
     private val isRefreshing = MutableStateFlow(false)
@@ -44,14 +46,16 @@ class CatsViewModel @Inject constructor(
         getCachedMediaUseCase(),
         isRefreshing,
         isLoadingMore,
-        errorState
-    ) { items, refreshing, loadingMore, error ->
+        errorState,
+        networkMonitor.isOnline
+    ) { items, refreshing, loadingMore, error, isOnline ->
         when {
             items.isNotEmpty() -> {
                 DiscoverUiState.Success(
                     items = items,
                     isRefreshing = refreshing,
-                    isLoadingMore = loadingMore
+                    isLoadingMore = loadingMore,
+                    isOffline = !isOnline
                 )
             }
             error != null -> {

@@ -57,6 +57,7 @@ fun CatsRoute(
             }
         },
         title = stringResource(id = UiR.string.cats),
+        offlinePlaceholderRes = UiR.drawable.ic_offline_cat,
         modifier = modifier
     )
 }

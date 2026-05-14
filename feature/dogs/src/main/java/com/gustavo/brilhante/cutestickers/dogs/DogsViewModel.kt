@@ -3,6 +3,7 @@ package com.gustavo.brilhante.cutestickers.dogs
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gustavo.brilhante.cutestickers.common.network.DogsApi
+import com.gustavo.brilhante.cutestickers.common.network.NetworkMonitor
 import com.gustavo.brilhante.cutestickers.domain.usecase.GetCachedMediaUseCase
 import com.gustavo.brilhante.cutestickers.domain.usecase.LoadNextPageUseCase
 import com.gustavo.brilhante.cutestickers.domain.usecase.RefreshMediaUseCase
@@ -27,7 +28,8 @@ class DogsViewModel @Inject constructor(
     @DogsApi private val getCachedMediaUseCase: GetCachedMediaUseCase,
     @DogsApi private val refreshMediaUseCase: RefreshMediaUseCase,
     @DogsApi private val loadNextPageUseCase: LoadNextPageUseCase,
-    private val myStickersRepository: MyStickersRepository
+    private val myStickersRepository: MyStickersRepository,
+    private val networkMonitor: NetworkMonitor
 ) : ViewModel() {
 
     private val isRefreshing = MutableStateFlow(false)
@@ -44,14 +46,16 @@ class DogsViewModel @Inject constructor(
         getCachedMediaUseCase(),
         isRefreshing,
         isLoadingMore,
-        errorState
-    ) { items, refreshing, loadingMore, error ->
+        errorState,
+        networkMonitor.isOnline
+    ) { items, refreshing, loadingMore, error, isOnline ->
         when {
             items.isNotEmpty() -> {
                 DiscoverUiState.Success(
                     items = items,
                     isRefreshing = refreshing,
-                    isLoadingMore = loadingMore
+                    isLoadingMore = loadingMore,
+                    isOffline = !isOnline
                 )
             }
             error != null -> {

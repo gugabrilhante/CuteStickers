@@ -1,5 +1,6 @@
 package com.gustavo.brilhante.cutestickers.dogs
 
+import com.gustavo.brilhante.cutestickers.common.network.NetworkMonitor
 import com.gustavo.brilhante.cutestickers.domain.usecase.GetCachedMediaUseCase
 import com.gustavo.brilhante.cutestickers.domain.usecase.LoadNextPageUseCase
 import com.gustavo.brilhante.cutestickers.domain.usecase.RefreshMediaUseCase
@@ -34,6 +35,8 @@ class DogsViewModelTest {
     private val refreshMediaUseCase = mockk<RefreshMediaUseCase>()
     private val loadNextPageUseCase = mockk<LoadNextPageUseCase>()
     private val myStickersRepository = mockk<MyStickersRepository>()
+    private val networkMonitor = mockk<NetworkMonitor>()
+    private val isOnlineFlow = MutableStateFlow(true)
     private val mediaFlow = MutableStateFlow<List<MediaItem>>(emptyList())
     private val testDispatcher = UnconfinedTestDispatcher()
 
@@ -44,11 +47,13 @@ class DogsViewModelTest {
         Dispatchers.setMain(testDispatcher)
         every { getCachedMediaUseCase() } returns mediaFlow
         coEvery { refreshMediaUseCase(any()) } returns true
+        every { networkMonitor.isOnline } returns isOnlineFlow
         viewModel = DogsViewModel(
             getCachedMediaUseCase,
             refreshMediaUseCase,
             loadNextPageUseCase,
-            myStickersRepository
+            myStickersRepository,
+            networkMonitor
         )
     }
 
@@ -153,5 +158,58 @@ class DogsViewModelTest {
         barrier.complete(Unit)
 
         coVerify(exactly = 1) { loadNextPageUseCase() }
+    }
+
+    @Test
+    fun uiState_whenOfflineWithItems_isOfflineTrue() = runTest(testDispatcher) {
+        mediaFlow.value = listOf(MediaItem(id = "dog1", url = "https://example.com/dog.jpg"))
+        isOnlineFlow.value = false
+        val job = launch { viewModel.uiState.collect {} }
+
+        val state = viewModel.uiState.value
+        assertTrue(state is DiscoverUiState.Success)
+        assertTrue((state as DiscoverUiState.Success).isOffline)
+        job.cancel()
+    }
+
+    @Test
+    fun uiState_whenOnlineWithItems_isOfflineFalse() = runTest(testDispatcher) {
+        mediaFlow.value = listOf(MediaItem(id = "dog1", url = "https://example.com/dog.jpg"))
+        isOnlineFlow.value = true
+        val job = launch { viewModel.uiState.collect {} }
+
+        val state = viewModel.uiState.value
+        assertTrue(state is DiscoverUiState.Success)
+        assertFalse((state as DiscoverUiState.Success).isOffline)
+        job.cancel()
+    }
+
+    @Test
+    fun refresh_offline_finishesRefreshingWithoutSpinner() = runTest(testDispatcher) {
+        isOnlineFlow.value = false
+        coEvery { refreshMediaUseCase(any()) } returns false
+        mediaFlow.value = listOf(MediaItem(id = "dog1", url = ""))
+        val job = launch { viewModel.uiState.collect {} }
+
+        viewModel.refresh()
+
+        val state = viewModel.uiState.value
+        assertTrue(state is DiscoverUiState.Success)
+        assertFalse((state as DiscoverUiState.Success).isRefreshing)
+        job.cancel()
+    }
+
+    @Test
+    fun uiState_networkSwitchesFromOfflineToOnline_bannerDisappears() = runTest(testDispatcher) {
+        mediaFlow.value = listOf(MediaItem(id = "dog1", url = "https://example.com/dog.jpg"))
+        isOnlineFlow.value = false
+        val job = launch { viewModel.uiState.collect {} }
+
+        assertTrue((viewModel.uiState.value as DiscoverUiState.Success).isOffline)
+
+        isOnlineFlow.value = true
+
+        assertFalse((viewModel.uiState.value as DiscoverUiState.Success).isOffline)
+        job.cancel()
     }
 }

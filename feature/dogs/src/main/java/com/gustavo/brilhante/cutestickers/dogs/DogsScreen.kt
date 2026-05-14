@@ -57,6 +57,7 @@ fun DogsRoute(
             }
         },
         title = stringResource(id = UiR.string.dogs),
+        offlinePlaceholderRes = UiR.drawable.ic_offline_dog,
         modifier = modifier
     )
 }

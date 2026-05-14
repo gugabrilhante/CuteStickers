@@ -27,4 +27,5 @@
     <string name="rotate">Girar</string>
     <string name="delete">Apagar</string>
     <string name="clear_selection">Limpar seleção</string>
+    <string name="offline_banner">Sem conexão. Exibindo conteúdo salvo.</string>
 </resources>

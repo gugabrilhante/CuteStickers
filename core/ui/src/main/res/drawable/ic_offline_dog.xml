@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="80dp"
+    android:height="80dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Dog head -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M5,13 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+    <!-- Left floppy ear -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M5,10 C2.5,9 1,11.5 1.5,15 C2,18 4,19.5 6,18 L6,10 Z" />
+    <!-- Right floppy ear -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M19,10 C21.5,9 23,11.5 22.5,15 C22,18 20,19.5 18,18 L18,10 Z" />
+</vector>

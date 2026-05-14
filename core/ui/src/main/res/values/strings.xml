@@ -29,4 +29,5 @@
     <string name="rotate">Rotate</string>
     <string name="delete">Delete</string>
     <string name="clear_selection">Clear selection</string>
+    <string name="offline_banner">No internet connection. Showing offline content.</string>
 </resources>
