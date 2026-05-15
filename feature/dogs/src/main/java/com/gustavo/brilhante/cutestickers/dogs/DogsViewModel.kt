@@ -9,6 +9,7 @@ import com.gustavo.brilhante.cutestickers.domain.usecase.LoadNextPageUseCase
 import com.gustavo.brilhante.cutestickers.domain.usecase.RefreshMediaUseCase
 import com.gustavo.brilhante.cutestickers.model.MediaItem
 import com.gustavo.brilhante.cutestickers.mystickers.domain.MyStickersRepository
+import com.gustavo.brilhante.cutestickers.ui.DiscoverUiEvent
 import com.gustavo.brilhante.cutestickers.ui.DiscoverUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
@@ -39,7 +41,12 @@ class DogsViewModel @Inject constructor(
     val selectedIds: StateFlow<Set<String>> = _selectedIds.asStateFlow()
 
     init {
-        refresh(force = false)
+        onEvent(DiscoverUiEvent.Refresh)
+        viewModelScope.launch {
+            networkMonitor.isOnline.drop(1).collect { isOnline ->
+                if (isOnline) onEvent(DiscoverUiEvent.Refresh)
+            }
+        }
     }
 
     val uiState: StateFlow<DiscoverUiState> = combine(
@@ -75,7 +82,19 @@ class DogsViewModel @Inject constructor(
         initialValue = DiscoverUiState.Loading
     )
 
-    fun refresh(force: Boolean = true) {
+    fun onEvent(event: DiscoverUiEvent) {
+        when (event) {
+            is DiscoverUiEvent.Refresh -> refresh(force = true)
+            is DiscoverUiEvent.LoadMore -> loadMore()
+            is DiscoverUiEvent.OnItemClick -> { /* Handled in Screen */ }
+            is DiscoverUiEvent.OnItemLongClick -> toggleSelection(event.item)
+            is DiscoverUiEvent.ClearSelection -> clearSelection()
+            is DiscoverUiEvent.SaveSelection -> saveSelectionToMyStickers()
+            is DiscoverUiEvent.AboutClick -> { /* Handled in Screen */ }
+        }
+    }
+
+    private fun refresh(force: Boolean = true) {
         viewModelScope.launch {
             val items = getCachedMediaUseCase().first()
             if (force || items.isEmpty()) isRefreshing.value = true
@@ -91,7 +110,7 @@ class DogsViewModel @Inject constructor(
         }
     }
 
-    fun loadMore() {
+    private fun loadMore() {
         viewModelScope.launch {
             if (isLoadingMore.value) return@launch
             isLoadingMore.value = true
@@ -105,17 +124,17 @@ class DogsViewModel @Inject constructor(
         }
     }
 
-    fun toggleSelection(item: MediaItem) {
+    private fun toggleSelection(item: MediaItem) {
         _selectedIds.update { current ->
             if (item.id in current) current - item.id else current + item.id
         }
     }
 
-    fun clearSelection() {
+    private fun clearSelection() {
         _selectedIds.value = emptySet()
     }
 
-    fun saveSelectionToMyStickers() {
+    private fun saveSelectionToMyStickers() {
         val selectedCopy = _selectedIds.value.toSet()
         if (selectedCopy.isEmpty()) return
         clearSelection()

@@ -30,6 +30,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MediaDetailsViewModelTest {
@@ -39,6 +40,7 @@ class MediaDetailsViewModelTest {
     private val saveMediaUseCase = mockk<SaveMediaUseCase>()
     private val metadataResolver = mockk<MediaMetadataResolver>()
     private val myStickersRepository = mockk<MyStickersRepository>()
+    private val autoCutUseCase = mockk<AutoCutUseCase>()
     private val testDispatcher = UnconfinedTestDispatcher()
 
     private lateinit var viewModel: MediaDetailsViewModel
@@ -52,7 +54,8 @@ class MediaDetailsViewModelTest {
             exportStickerPackUseCase,
             saveMediaUseCase,
             metadataResolver,
-            myStickersRepository
+            myStickersRepository,
+            autoCutUseCase
         )
     }
 
@@ -65,9 +68,9 @@ class MediaDetailsViewModelTest {
     fun initSetsCorrectMediaTypeFromResolver() = runTest(testDispatcher) {
         val url = "https://example.com/cat.gif"
         every { metadataResolver.getMediaType(url) } returns MediaType.Animated
-        
+
         viewModel.init(url, "123")
-        
+
         assertEquals(MediaType.Animated, viewModel.uiState.value.mediaType)
         assertEquals(url, viewModel.uiState.value.imageUrl)
     }
@@ -76,10 +79,10 @@ class MediaDetailsViewModelTest {
     fun onAddToWhatsAppUpdatesStateToSuccess() = runTest(testDispatcher) {
         val pack = StickerPack("id", "name", "pub", "tray", emptyList(), false)
         coEvery { createStickerUseCase(any(), any(), any(), any()) } returns Result.success(pack)
-        
+
         viewModel.init("url", "id")
         viewModel.onAddToWhatsApp()
-        
+
         assertTrue(viewModel.uiState.value.stickerState is StickerState.Success)
         assertEquals(pack, (viewModel.uiState.value.stickerState as StickerState.Success).pack)
     }
@@ -89,14 +92,14 @@ class MediaDetailsViewModelTest {
         val pack = StickerPack("id", "name", "pub", "tray", emptyList(), false)
         val metadata = ExportMetadata("id", "auth", "name", "pub", "tray", false, "pkg")
         coEvery { exportStickerPackUseCase.getExportMetadata(pack) } returns Result.success(metadata)
-        
+
         val events = mutableListOf<MediaDetailsEvent>()
         val collectJob = launch {
             viewModel.events.toList(events)
         }
-        
+
         viewModel.onConfirmExport(pack)
-        
+
         assertTrue(events.first() is MediaDetailsEvent.ExportToWhatsApp)
         val event = events.first() as MediaDetailsEvent.ExportToWhatsApp
         assertEquals("id", event.packId)
@@ -107,7 +110,7 @@ class MediaDetailsViewModelTest {
     @Test
     fun onExportResultSuccessUpdatesState() = runTest(testDispatcher) {
         viewModel.onExportResult(Activity.RESULT_OK, null)
-        
+
         assertTrue(viewModel.uiState.value.stickerState is StickerState.Idle)
     }
 
@@ -144,7 +147,6 @@ class MediaDetailsViewModelTest {
         assertEquals("Network error", (viewModel.uiState.value.saveToMyStickersState as SaveToMyStickersState.Error).message)
     }
 
-    // Bug 2: "Save to My Stickers" must be hidden when media already comes from the local library
     @Test
     fun initWithFileUrl_setsIsLocalMediaTrue() = runTest(testDispatcher) {
         viewModel.init("file:///data/user/0/com.example/files/my-stickers/img.jpg", "id")
@@ -176,5 +178,87 @@ class MediaDetailsViewModelTest {
         viewModel.dismissSaveToMyStickers()
 
         assertTrue(viewModel.uiState.value.saveToMyStickersState is SaveToMyStickersState.Idle)
+    }
+
+    // --- Auto Cut ---
+
+    @Test
+    fun onToggleAutoCut_success_setsReadyState() = runTest(testDispatcher) {
+        val fakeFile = File("/cache/autocut_123.png")
+        coEvery { autoCutUseCase(any()) } returns Result.success(fakeFile)
+
+        viewModel.init("https://example.com/cat.jpg", "id")
+        viewModel.onToggleAutoCut()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.autoCutState is AutoCutState.Ready)
+        assertEquals("file:///cache/autocut_123.png", (state.autoCutState as AutoCutState.Ready).localUri)
+    }
+
+    @Test
+    fun onToggleAutoCut_failure_setsErrorState() = runTest(testDispatcher) {
+        coEvery { autoCutUseCase(any()) } returns Result.failure(RuntimeException("ML Kit error"))
+
+        viewModel.init("https://example.com/cat.jpg", "id")
+        viewModel.onToggleAutoCut()
+
+        assertTrue(viewModel.uiState.value.autoCutState is AutoCutState.Error)
+    }
+
+    @Test
+    fun onToggleAutoCut_whenReady_resetsToIdle() = runTest(testDispatcher) {
+        val fakeFile = File("/cache/autocut_123.png")
+        coEvery { autoCutUseCase(any()) } returns Result.success(fakeFile)
+        viewModel.init("https://example.com/cat.jpg", "id")
+        viewModel.onToggleAutoCut()
+        assertTrue(viewModel.uiState.value.autoCutState is AutoCutState.Ready)
+
+        viewModel.onToggleAutoCut()
+
+        assertTrue(viewModel.uiState.value.autoCutState is AutoCutState.Idle)
+    }
+
+    @Test
+    fun onToggleAutoCut_fromError_retriesAndSetsReady() = runTest(testDispatcher) {
+        val fakeFile = File("/cache/autocut_456.png")
+        coEvery { autoCutUseCase(any()) } returnsMany listOf(
+            Result.failure(RuntimeException("first failure")),
+            Result.success(fakeFile)
+        )
+        viewModel.init("https://example.com/cat.jpg", "id")
+        viewModel.onToggleAutoCut()
+        assertTrue(viewModel.uiState.value.autoCutState is AutoCutState.Error)
+
+        viewModel.onToggleAutoCut()
+
+        assertTrue(viewModel.uiState.value.autoCutState is AutoCutState.Ready)
+    }
+
+    @Test
+    fun onAddToWhatsApp_whenAutoCutReady_usesLocalUri() = runTest(testDispatcher) {
+        val fakeFile = File("/cache/autocut_123.png")
+        coEvery { autoCutUseCase(any()) } returns Result.success(fakeFile)
+        val pack = StickerPack("id", "name", "pub", "tray", emptyList(), false)
+        coEvery { createStickerUseCase("file:///cache/autocut_123.png", any(), any(), any()) } returns Result.success(pack)
+        viewModel.init("https://example.com/cat.jpg", "id")
+        viewModel.onToggleAutoCut()
+
+        viewModel.onAddToWhatsApp()
+
+        assertTrue(viewModel.uiState.value.stickerState is StickerState.Success)
+    }
+
+    @Test
+    fun saveToMyStickers_whenAutoCutReady_usesLocalUri() = runTest(testDispatcher) {
+        val fakeFile = File("/cache/autocut_123.png")
+        coEvery { autoCutUseCase(any()) } returns Result.success(fakeFile)
+        val sticker = MySticker("id", "/path/img.png", SourceType.GALLERY, 1000L)
+        coEvery { myStickersRepository.saveFromUri("file:///cache/autocut_123.png") } returns Result.success(sticker)
+        viewModel.init("https://example.com/cat.jpg", "id")
+        viewModel.onToggleAutoCut()
+
+        viewModel.saveToMyStickers()
+
+        assertTrue(viewModel.uiState.value.saveToMyStickersState is SaveToMyStickersState.Success)
     }
 }

@@ -30,4 +30,6 @@
     <string name="delete">Delete</string>
     <string name="clear_selection">Clear selection</string>
     <string name="offline_banner">No internet connection. Showing offline content.</string>
+    <string name="auto_cut">Auto Cut ✨</string>
+    <string name="auto_cut_failed">Couldn\'t detect subject. Using original.</string>
 </resources>

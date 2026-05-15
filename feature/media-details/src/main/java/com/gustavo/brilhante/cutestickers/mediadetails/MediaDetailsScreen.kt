@@ -54,6 +54,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -63,7 +64,6 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import androidx.compose.ui.res.stringResource
 import com.gustavo.brilhante.cutestickers.ui.R as UiR
 import com.gustavo.brilhante.cutestickers.designsystem.theme.CuteStickersTheme
 import com.gustavo.brilhante.cutestickers.stickers.domain.StickerPack
@@ -156,7 +156,8 @@ fun MediaDetailsRoute(
         onConfirmExport = viewModel::onConfirmExport,
         onDismissStickerSheet = viewModel::dismissStickerSheet,
         onToggleCrop = viewModel::onToggleCrop,
-        onSaveToMyStickers = viewModel::saveToMyStickers
+        onSaveToMyStickers = viewModel::saveToMyStickers,
+        onToggleAutoCut = viewModel::onToggleAutoCut
     )
 }
 
@@ -174,11 +175,13 @@ fun MediaDetailsScreen(
     onConfirmExport: (StickerPack) -> Unit = {},
     onDismissStickerSheet: () -> Unit = {},
     onToggleCrop: () -> Unit = {},
-    onSaveToMyStickers: () -> Unit = {}
+    onSaveToMyStickers: () -> Unit = {},
+    onToggleAutoCut: () -> Unit = {}
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     val savedToGalleryMessage = stringResource(UiR.string.saved_to_gallery)
+    val autoCutFailedMessage = stringResource(UiR.string.auto_cut_failed)
 
     LaunchedEffect(uiState.stickerState) {
         when (val state = uiState.stickerState) {
@@ -193,6 +196,19 @@ fun MediaDetailsScreen(
             is DownloadState.Success -> snackbarHostState.showSnackbar(savedToGalleryMessage)
             else -> Unit
         }
+    }
+
+    LaunchedEffect(uiState.autoCutState) {
+        if (uiState.autoCutState is AutoCutState.Error) {
+            snackbarHostState.showSnackbar(autoCutFailedMessage)
+        }
+    }
+
+    val isAutoCutReady = uiState.autoCutState is AutoCutState.Ready
+    val imageModel = if (isAutoCutReady) {
+        (uiState.autoCutState as AutoCutState.Ready).localUri
+    } else {
+        uiState.imageUrl
     }
 
     with(sharedTransitionScope) {
@@ -224,9 +240,16 @@ fun MediaDetailsScreen(
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
             ) {
-                Box {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .background(
+                            if (isAutoCutReady) Color(0xFFE0E0E0) else Color.Transparent
+                        )
+                ) {
                     AsyncImage(
-                        model = uiState.imageUrl,
+                        model = imageModel,
                         contentDescription = null,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -237,9 +260,13 @@ fun MediaDetailsScreen(
                             )
                             .clip(RoundedCornerShape(0.dp))
                             .testTag("hero_image"),
-                        contentScale = if (uiState.isCropped) ContentScale.Crop else ContentScale.Fit
+                        contentScale = when {
+                            isAutoCutReady -> ContentScale.Fit
+                            uiState.isCropped -> ContentScale.Crop
+                            else -> ContentScale.Fit
+                        }
                     )
-                    
+
                     Row(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
@@ -257,6 +284,36 @@ fun MediaDetailsScreen(
                                 selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                                 selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                             )
+                        )
+
+                        FilterChip(
+                            selected = isAutoCutReady,
+                            onClick = onToggleAutoCut,
+                            enabled = uiState.autoCutState !is AutoCutState.Loading,
+                            label = {
+                                if (uiState.autoCutState is AutoCutState.Loading) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(12.dp),
+                                            strokeWidth = 1.5.dp,
+                                            color = Color.White
+                                        )
+                                        Text(stringResource(UiR.string.auto_cut))
+                                    }
+                                } else {
+                                    Text(stringResource(UiR.string.auto_cut))
+                                }
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = Color.Black.copy(alpha = 0.4f),
+                                labelColor = Color.White,
+                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            ),
+                            modifier = Modifier.testTag("auto_cut_chip")
                         )
 
                         if (uiState.mediaType is com.gustavo.brilhante.cutestickers.model.MediaType.Animated) {
@@ -361,7 +418,6 @@ fun StickerPreviewContent(
     onConfirm: () -> Unit
 ) {
     val context = LocalContext.current
-    // For preview, we show only the LATEST sticker added to the pack
     val stickerFile = remember(pack) {
         val lastStickerFileName = pack.stickers.last().imageFileName
         File(File(context.filesDir, "stickers/${pack.id}"), lastStickerFileName)

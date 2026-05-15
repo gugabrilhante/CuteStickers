@@ -84,8 +84,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -97,25 +95,38 @@ sealed interface DiscoverUiState {
     data object Loading : DiscoverUiState
     data class Success(
         val items: List<MediaItem>,
-        val isRefreshing: Boolean = false,
+        override val isRefreshing: Boolean = false,
         val isLoadingMore: Boolean = false,
-        val isOffline: Boolean = false
+        override val isOffline: Boolean = false
     ) : DiscoverUiState
     data class Error(
         val message: String,
         val isNoInternet: Boolean = false,
-        val isRefreshing: Boolean = false
+        override val isRefreshing: Boolean = false
     ) : DiscoverUiState
+
+    val isRefreshing: Boolean
+        get() = false
+
+    val isOffline: Boolean
+        get() = false
+}
+
+sealed interface DiscoverUiEvent {
+    data object Refresh : DiscoverUiEvent
+    data object LoadMore : DiscoverUiEvent
+    data class OnItemClick(val item: MediaItem) : DiscoverUiEvent
+    data class OnItemLongClick(val item: MediaItem) : DiscoverUiEvent
+    data object ClearSelection : DiscoverUiEvent
+    data object SaveSelection : DiscoverUiEvent
+    data object AboutClick : DiscoverUiEvent
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun DiscoverScreen(
     uiState: DiscoverUiState,
-    onItemClick: (MediaItem) -> Unit,
-    onRefresh: () -> Unit,
-    onLoadMore: () -> Unit,
-    onAboutClick: () -> Unit,
+    onEvent: (DiscoverUiEvent) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     badgeText: String,
@@ -126,15 +137,12 @@ fun DiscoverScreen(
     title: String,
     modifier: Modifier = Modifier,
     selectedIds: Set<String> = emptySet(),
-    onItemLongClick: (MediaItem) -> Unit = {},
-    onClearSelection: () -> Unit = {},
-    onSaveSelectionToMyStickers: () -> Unit = {},
     offlinePlaceholderRes: Int = 0
 ) {
     val gridState = rememberLazyGridState()
 
     BackHandler(enabled = selectedIds.isNotEmpty()) {
-        onClearSelection()
+        onEvent(DiscoverUiEvent.ClearSelection)
     }
 
     val shouldLoadMore = remember {
@@ -147,7 +155,7 @@ fun DiscoverScreen(
 
     LaunchedEffect(shouldLoadMore.value) {
         if (shouldLoadMore.value && uiState is DiscoverUiState.Success && !uiState.isLoadingMore) {
-            onLoadMore()
+            onEvent(DiscoverUiEvent.LoadMore)
         }
     }
 
@@ -164,27 +172,13 @@ fun DiscoverScreen(
         )
     }
 
-    val isRefreshing = when (uiState) {
-        is DiscoverUiState.Success -> uiState.isRefreshing
-        is DiscoverUiState.Error -> uiState.isRefreshing
-        else -> false
-    }
-
-    val isOffline = uiState is DiscoverUiState.Success && uiState.isOffline
-
-    LaunchedEffect(isOffline) {
-        if (!isOffline && uiState is DiscoverUiState.Success) {
-            onRefresh()
-        }
-    }
-
     Scaffold(
         topBar = {
             Column {
                 TopAppBar(
                     title = { Text(title) },
                     actions = {
-                        IconButton(onClick = onAboutClick) {
+                        IconButton(onClick = { onEvent(DiscoverUiEvent.AboutClick) }) {
                             Icon(imageVector = Icons.Default.Info, contentDescription = stringResource(UiR.string.about))
                         }
                     },
@@ -195,7 +189,7 @@ fun DiscoverScreen(
                     )
                 )
                 AnimatedVisibility(
-                    visible = isOffline,
+                    visible = uiState.isOffline,
                     enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
                     exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut()
                 ) {
@@ -208,12 +202,12 @@ fun DiscoverScreen(
         },
         floatingActionButton = {
             AnimatedVisibility(
-                visible = selectedIds.isNotEmpty() && !isRefreshing,
+                visible = selectedIds.isNotEmpty() && !uiState.isRefreshing,
                 enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
                 exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
             ) {
                 ExtendedFloatingActionButton(
-                    onClick = onSaveSelectionToMyStickers,
+                    onClick = { onEvent(DiscoverUiEvent.SaveSelection) },
                     icon = { Icon(Icons.Default.Star, contentDescription = null) },
                     text = { Text(stringResource(UiR.string.save_selection)) },
                     modifier = Modifier
@@ -247,7 +241,7 @@ fun DiscoverScreen(
                 is DiscoverUiState.Success -> {
                     PullToRefreshBox(
                         isRefreshing = uiState.isRefreshing,
-                        onRefresh = onRefresh,
+                        onRefresh = { onEvent(DiscoverUiEvent.Refresh) },
                         modifier = Modifier.fillMaxSize()
                     ) {
                         LazyVerticalGrid(
@@ -264,8 +258,8 @@ fun DiscoverScreen(
                             items(uiState.items, key = { it.id }) { item ->
                                 MediaCard(
                                     item = item,
-                                    onItemClick = onItemClick,
-                                    onItemLongClick = onItemLongClick,
+                                    onItemClick = { onEvent(DiscoverUiEvent.OnItemClick(it)) },
+                                    onItemLongClick = { onEvent(DiscoverUiEvent.OnItemLongClick(it)) },
                                     isSelected = item.id in selectedIds,
                                     sharedTransitionScope = sharedTransitionScope,
                                     animatedVisibilityScope = animatedVisibilityScope,
@@ -285,7 +279,7 @@ fun DiscoverScreen(
                 is DiscoverUiState.Error -> {
                     PullToRefreshBox(
                         isRefreshing = uiState.isRefreshing,
-                        onRefresh = onRefresh,
+                        onRefresh = { onEvent(DiscoverUiEvent.Refresh) },
                         modifier = Modifier.fillMaxSize()
                     ) {
                         Column(
@@ -313,7 +307,7 @@ fun DiscoverScreen(
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Spacer(modifier = Modifier.height(24.dp))
-                            Button(onClick = onRefresh) {
+                            Button(onClick = { onEvent(DiscoverUiEvent.Refresh) }) {
                                 Text(text = stringResource(UiR.string.retry))
                             }
                         }

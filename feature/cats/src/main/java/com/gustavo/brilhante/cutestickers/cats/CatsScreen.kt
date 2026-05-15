@@ -14,6 +14,7 @@ import androidx.compose.ui.res.stringResource
 import com.gustavo.brilhante.cutestickers.common.PreferencesManager
 import com.gustavo.brilhante.cutestickers.model.MediaItem
 import com.gustavo.brilhante.cutestickers.ui.DiscoverScreen
+import com.gustavo.brilhante.cutestickers.ui.DiscoverUiEvent
 import kotlinx.coroutines.launch
 import com.gustavo.brilhante.cutestickers.ui.R as UiR
 
@@ -36,15 +37,19 @@ fun CatsRoute(
     DiscoverScreen(
         uiState = uiState,
         selectedIds = selectedIds,
-        onItemClick = { item ->
-            if (selectedIds.isNotEmpty()) viewModel.toggleSelection(item) else onItemClick(item)
+        onEvent = { event ->
+            when (event) {
+                is DiscoverUiEvent.OnItemClick -> {
+                    if (selectedIds.isNotEmpty()) {
+                        viewModel.onEvent(DiscoverUiEvent.OnItemLongClick(event.item))
+                    } else {
+                        onItemClick(event.item)
+                    }
+                }
+                is DiscoverUiEvent.AboutClick -> onAboutClick()
+                else -> viewModel.onEvent(event)
+            }
         },
-        onItemLongClick = viewModel::toggleSelection,
-        onClearSelection = viewModel::clearSelection,
-        onSaveSelectionToMyStickers = viewModel::saveSelectionToMyStickers,
-        onRefresh = viewModel::refresh,
-        onLoadMore = viewModel::loadMore,
-        onAboutClick = onAboutClick,
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope,
         badgeText = stringResource(id = UiR.string.tap_to_create_sticker),

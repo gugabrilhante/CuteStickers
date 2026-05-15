@@ -28,4 +28,6 @@
     <string name="delete">Apagar</string>
     <string name="clear_selection">Limpar seleção</string>
     <string name="offline_banner">Sem conexão. Exibindo conteúdo salvo.</string>
+    <string name="auto_cut">Recorte Auto ✨</string>
+    <string name="auto_cut_failed">Não foi possível detectar o assunto. Usando original.</string>
 </resources>

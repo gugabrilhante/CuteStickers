@@ -29,6 +29,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -43,7 +44,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gustavo.brilhante.cutestickers.mystickers.R as MyR
 import com.gustavo.brilhante.cutestickers.ui.R as UiR
-import kotlinx.coroutines.launch
 
 enum class CropMode { ORIGINAL, AUTO_CUT }
 
@@ -54,14 +54,17 @@ fun ImageCropScreen(
     onCropComplete: (android.net.Uri) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val scope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Pure display state — not business logic
+    LaunchedEffect(Unit) {
+        viewModel.cropResult.collect {
+            onCropComplete(it)
+        }
+    }
+
+    // Pure display interaction state
     var displayScale by remember { mutableFloatStateOf(1f) }
     var displayOffset by remember { mutableStateOf(Offset.Zero) }
-    var rotation by remember { mutableFloatStateOf(0f) }
-    var isCropping by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -71,6 +74,7 @@ fun ImageCropScreen(
     ) {
         val ready = uiState as? ImageCropUiState.Ready
         val bmp = ready?.displayBitmap
+        val rotation = ready?.rotation ?: 0f
 
         if (bmp != null) {
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -165,7 +169,7 @@ fun ImageCropScreen(
                     SingleChoiceSegmentedButtonRow {
                         SegmentedButton(
                             selected = ready.mode == CropMode.ORIGINAL,
-                            onClick = { viewModel.setMode(CropMode.ORIGINAL) },
+                            onClick = { viewModel.onEvent(ImageCropUiEvent.SetMode(CropMode.ORIGINAL)) },
                             shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
                             enabled = !ready.isAutoCutting,
                             colors = SegmentedButtonDefaults.colors(
@@ -178,7 +182,7 @@ fun ImageCropScreen(
                         }
                         SegmentedButton(
                             selected = ready.mode == CropMode.AUTO_CUT,
-                            onClick = { viewModel.setMode(CropMode.AUTO_CUT) },
+                            onClick = { viewModel.onEvent(ImageCropUiEvent.SetMode(CropMode.AUTO_CUT)) },
                             shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
                             enabled = !ready.isAutoCutting,
                             colors = SegmentedButtonDefaults.colors(
@@ -221,40 +225,25 @@ fun ImageCropScreen(
                         Text(stringResource(UiR.string.cancel), color = Color.White)
                     }
                     OutlinedButton(onClick = {
-                        rotation = (rotation + 90f) % 360f
+                        viewModel.onEvent(ImageCropUiEvent.Rotate)
                         displayOffset = Offset.Zero
                     }) {
                         Text(stringResource(UiR.string.rotate), color = Color.White)
                     }
                     Button(
                         onClick = {
-                            if (isCropping) return@Button
-                            isCropping = true
-                            scope.launch {
-                                val totalScale = displayScale * fitScale
-                                val rotatedW = if (rotation % 180 == 0f) bmp.width else bmp.height
-                                val rotatedH = if (rotation % 180 == 0f) bmp.height else bmp.width
-                                val imgW = rotatedW * totalScale
-                                val imgH = rotatedH * totalScale
-                                val imgLeft = (boxW - imgW) / 2f + displayOffset.x
-                                val imgTop = (boxH - imgH) / 2f + displayOffset.y
-                                val cropLeft = (boxW - cropSizePx) / 2f
-                                val cropTop = (boxH - cropSizePx) / 2f
-
-                                val (bmpX, bmpY, bmpSize) = computeCropRegion(
-                                    cropLeft, cropTop, cropSizePx,
-                                    imgLeft, imgTop, totalScale,
-                                    rotatedW, rotatedH
-                                )
-                                val resultUri = viewModel.saveCrop(bmp, bmpX, bmpY, bmpSize, rotation)
-                                isCropping = false
-                                onCropComplete(resultUri)
-                            }
+                            viewModel.onEvent(ImageCropUiEvent.ConfirmCrop(
+                                displayScale = displayScale,
+                                displayOffset = displayOffset,
+                                boxSize = Size(boxW, boxH),
+                                cropSizePx = cropSizePx,
+                                fitScale = fitScale
+                            ))
                         },
-                        enabled = !isCropping && !ready.isAutoCutting,
+                        enabled = !ready.isCropping && !ready.isAutoCutting,
                         modifier = Modifier.testTag("crop_confirm_button")
                     ) {
-                        if (isCropping) {
+                        if (ready.isCropping) {
                             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
                         } else {
                             Text(stringResource(UiR.string.crop))

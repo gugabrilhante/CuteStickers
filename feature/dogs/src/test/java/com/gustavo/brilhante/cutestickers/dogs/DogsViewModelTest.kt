@@ -212,4 +212,25 @@ class DogsViewModelTest {
         assertFalse((viewModel.uiState.value as DiscoverUiState.Success).isOffline)
         job.cancel()
     }
+
+    @Test
+    fun networkReconnect_triggersRefresh() = runTest(testDispatcher) {
+        mediaFlow.value = listOf(MediaItem(id = "dog1", url = "https://example.com/dog.jpg"))
+
+        isOnlineFlow.value = false
+        isOnlineFlow.value = true
+
+        // init called refreshMediaUseCase(false) once; reconnect triggers a second call
+        coVerify(exactly = 2) { refreshMediaUseCase(false) }
+    }
+
+    @Test
+    fun goingOffline_doesNotTriggerRefresh() = runTest(testDispatcher) {
+        mediaFlow.value = listOf(MediaItem(id = "dog1", url = "https://example.com/dog.jpg"))
+
+        isOnlineFlow.value = false
+
+        // Only the init call with force=false should have happened (no extra call on going offline)
+        coVerify(exactly = 1) { refreshMediaUseCase(false) }
+    }
 }
