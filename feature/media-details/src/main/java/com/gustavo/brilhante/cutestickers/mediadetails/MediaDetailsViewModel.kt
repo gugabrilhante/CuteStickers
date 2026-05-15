@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gustavo.brilhante.cutestickers.common.MediaMetadataResolver
+import com.gustavo.brilhante.cutestickers.mystickers.domain.MyStickersRepository
 import com.gustavo.brilhante.cutestickers.stickers.domain.CreateStickerUseCase
 import com.gustavo.brilhante.cutestickers.stickers.domain.ExportMetadata
 import com.gustavo.brilhante.cutestickers.stickers.domain.ExportStickerPackUseCase
@@ -34,17 +35,31 @@ sealed interface DownloadState {
     data class Error(val message: String) : DownloadState
 }
 
+sealed interface SaveToMyStickersState {
+    data object Idle : SaveToMyStickersState
+    data object Loading : SaveToMyStickersState
+    data object Success : SaveToMyStickersState
+    data class Error(val message: String) : SaveToMyStickersState
+}
+
 data class MediaDetailsUiState(
     val imageUrl: String = "",
     val mediaId: String = "",
     val mediaType: MediaType = MediaType.Static,
     val stickerState: StickerState = StickerState.Idle,
     val downloadState: DownloadState = DownloadState.Idle,
-    val isCropped: Boolean = true
+    val saveToMyStickersState: SaveToMyStickersState = SaveToMyStickersState.Idle,
+    val isCropped: Boolean = true,
+    val isLocalMedia: Boolean = false
 )
 
 sealed interface MediaDetailsEvent {
-    data class LaunchIntent(val intent: Intent) : MediaDetailsEvent
+    data class ExportToWhatsApp(
+        val packId: String,
+        val authority: String,
+        val packName: String,
+        val targetPackage: String
+    ) : MediaDetailsEvent
 }
 
 @HiltViewModel
@@ -52,7 +67,8 @@ class MediaDetailsViewModel @Inject constructor(
     private val createStickerUseCase: CreateStickerUseCase,
     private val exportStickerPackUseCase: ExportStickerPackUseCase,
     private val saveMediaUseCase: SaveMediaUseCase,
-    private val metadataResolver: MediaMetadataResolver
+    private val metadataResolver: MediaMetadataResolver,
+    private val myStickersRepository: MyStickersRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MediaDetailsUiState())
@@ -63,7 +79,8 @@ class MediaDetailsViewModel @Inject constructor(
 
     fun init(imageUrl: String, mediaId: String) {
         val type = metadataResolver.getMediaType(imageUrl)
-        _uiState.update { it.copy(imageUrl = imageUrl, mediaId = mediaId, mediaType = type) }
+        val isLocal = imageUrl.startsWith("file://") || imageUrl.startsWith("/")
+        _uiState.update { it.copy(imageUrl = imageUrl, mediaId = mediaId, mediaType = type, isLocalMedia = isLocal) }
     }
 
     fun onToggleCrop() {
@@ -91,14 +108,14 @@ class MediaDetailsViewModel @Inject constructor(
         viewModelScope.launch {
             exportStickerPackUseCase.getExportMetadata(pack)
                 .onSuccess { metadata ->
-                    val intent = Intent().apply {
-                        action = "com.whatsapp.intent.action.ENABLE_STICKER_PACK"
-                        putExtra("sticker_pack_id", metadata.packId)
-                        putExtra("sticker_pack_authority", metadata.authority)
-                        putExtra("sticker_pack_name", metadata.packName)
-                        setPackage(metadata.targetPackage)
-                    }
-                    _events.send(MediaDetailsEvent.LaunchIntent(intent))
+                    _events.send(
+                        MediaDetailsEvent.ExportToWhatsApp(
+                            packId = metadata.packId,
+                            authority = metadata.authority,
+                            packName = metadata.packName,
+                            targetPackage = metadata.targetPackage
+                        )
+                    )
                 }
                 .onFailure { e ->
                     _uiState.update {
@@ -138,5 +155,24 @@ class MediaDetailsViewModel @Inject constructor(
 
     fun onDownloadPermissionDenied() {
         _uiState.update { it.copy(downloadState = DownloadState.Error("Storage permission required to save image")) }
+    }
+
+    fun saveToMyStickers() {
+        val state = _uiState.value
+        if (state.saveToMyStickersState is SaveToMyStickersState.Loading) return
+        _uiState.update { it.copy(saveToMyStickersState = SaveToMyStickersState.Loading) }
+        viewModelScope.launch {
+            myStickersRepository.saveFromUrl(state.imageUrl, state.mediaId)
+                .onSuccess { _uiState.update { it.copy(saveToMyStickersState = SaveToMyStickersState.Success) } }
+                .onFailure { e ->
+                    _uiState.update {
+                        it.copy(saveToMyStickersState = SaveToMyStickersState.Error(e.message ?: "Failed to save"))
+                    }
+                }
+        }
+    }
+
+    fun dismissSaveToMyStickers() {
+        _uiState.update { it.copy(saveToMyStickersState = SaveToMyStickersState.Idle) }
     }
 }

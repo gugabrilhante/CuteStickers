@@ -58,6 +58,22 @@ subprojects {
         apply(plugin = "jacoco")
         configure<JacocoPluginExtension> { toolVersion = "0.8.12" }
     }
+    tasks.withType<Test>().configureEach {
+        // Required for JaCoCo agent to attach on JDK 17+
+        jvmArgs(
+            "-XX:+EnableDynamicAgentLoading",
+            "-Djdk.attach.allowAttachSelf=true",
+            "-Dobjenesis.ignore.jdk.type.check=true",
+            "--add-opens=java.base/java.lang=ALL-UNNAMED",
+            "--add-opens=java.base/java.util=ALL-UNNAMED",
+            "--add-opens=java.base/java.lang.reflect=ALL-UNNAMED",
+            "--add-opens=java.base/java.io=ALL-UNNAMED",
+            "--add-opens=java.base/java.net=ALL-UNNAMED",
+            "--add-opens=java.base/jdk.internal.reflect=ALL-UNNAMED",
+            "--add-exports=java.base/jdk.internal.reflect=ALL-UNNAMED",
+            "--add-opens=java.base/sun.reflect.annotation=ALL-UNNAMED"
+        )
+    }
 }
 
 // Root-level jacoco plugin is needed for the JacocoReport task type below.

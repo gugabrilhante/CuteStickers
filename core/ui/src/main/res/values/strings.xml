@@ -14,11 +14,20 @@
     <string name="gif">GIF</string>
     <string name="add_to_whatsapp">Add to WhatsApp</string>
     <string name="download">Download</string>
-    <string name="my_stickers">My stickers</string>
+    <string name="my_stickers">My Stickers</string>
     <string name="tap_to_add_to_whatsapp">Tap to add this sticker to WhatsApp</string>
     <string name="saved_to_gallery">Saved to gallery!</string>
     <string name="crop">Crop</string>
     <string name="retry">Retry</string>
     <string name="error_message">Failed to load. Please try again.</string>
     <string name="error_no_internet">No internet connection. Please check your network.</string>
+    <string name="saved_to_my_stickers">Saved to My Stickers!</string>
+    <string name="save_to_my_stickers">Save to My Stickers</string>
+    <string name="save_selection">Save</string>
+    <string name="selected_count">%1$d selected</string>
+    <string name="cancel">Cancel</string>
+    <string name="rotate">Rotate</string>
+    <string name="delete">Delete</string>
+    <string name="clear_selection">Clear selection</string>
+    <string name="offline_banner">No internet connection. Showing offline content.</string>
 </resources>

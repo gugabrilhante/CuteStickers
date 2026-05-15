@@ -6,6 +6,8 @@ import com.gustavo.brilhante.cutestickers.common.DefaultTimeProvider
 import com.gustavo.brilhante.cutestickers.common.Logger
 import com.gustavo.brilhante.cutestickers.common.PackageManagerWrapper
 import com.gustavo.brilhante.cutestickers.common.TimeProvider
+import com.gustavo.brilhante.cutestickers.common.network.ConnectivityManagerNetworkMonitor
+import com.gustavo.brilhante.cutestickers.common.network.NetworkMonitor
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -26,4 +28,8 @@ interface CommonModule {
     @Binds
     @Singleton
     fun bindPackageManagerWrapper(impl: AndroidPackageManagerWrapper): PackageManagerWrapper
+
+    @Binds
+    @Singleton
+    fun bindNetworkMonitor(impl: ConnectivityManagerNetworkMonitor): NetworkMonitor
 }

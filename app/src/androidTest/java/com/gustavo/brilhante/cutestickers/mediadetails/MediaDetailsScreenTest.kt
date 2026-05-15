@@ -16,6 +16,8 @@ import com.gustavo.brilhante.cutestickers.mediadetails.StickerState
 import com.gustavo.brilhante.cutestickers.designsystem.theme.CuteStickersTheme
 import com.gustavo.brilhante.cutestickers.model.MediaType
 import androidx.compose.ui.test.onNodeWithText
+import androidx.test.platform.app.InstrumentationRegistry
+import com.gustavo.brilhante.cutestickers.ui.R as UiR
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import org.junit.Rule
@@ -162,8 +164,11 @@ class MediaDetailsScreenTest {
             }
         }
 
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val myStickersTitle = context.getString(UiR.string.my_stickers)
+
         composeTestRule.onNodeWithTag("sticker_preview_image").assertIsDisplayed()
-        composeTestRule.onNodeWithText("My stickers").assertIsDisplayed()
+        composeTestRule.onNodeWithText(myStickersTitle).assertIsDisplayed()
     }
 
     @Test

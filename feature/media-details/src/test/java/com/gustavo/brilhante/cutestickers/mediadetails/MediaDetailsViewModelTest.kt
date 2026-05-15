@@ -4,6 +4,9 @@ import android.app.Activity
 import android.content.Intent
 import com.gustavo.brilhante.cutestickers.common.MediaMetadataResolver
 import com.gustavo.brilhante.cutestickers.model.MediaType
+import com.gustavo.brilhante.cutestickers.mystickers.domain.MySticker
+import com.gustavo.brilhante.cutestickers.mystickers.domain.MyStickersRepository
+import com.gustavo.brilhante.cutestickers.mystickers.domain.SourceType
 import com.gustavo.brilhante.cutestickers.stickers.domain.CreateStickerUseCase
 import com.gustavo.brilhante.cutestickers.stickers.domain.ExportMetadata
 import com.gustavo.brilhante.cutestickers.stickers.domain.ExportStickerPackUseCase
@@ -23,6 +26,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -34,6 +38,7 @@ class MediaDetailsViewModelTest {
     private val exportStickerPackUseCase = mockk<ExportStickerPackUseCase>()
     private val saveMediaUseCase = mockk<SaveMediaUseCase>()
     private val metadataResolver = mockk<MediaMetadataResolver>()
+    private val myStickersRepository = mockk<MyStickersRepository>()
     private val testDispatcher = UnconfinedTestDispatcher()
 
     private lateinit var viewModel: MediaDetailsViewModel
@@ -46,7 +51,8 @@ class MediaDetailsViewModelTest {
             createStickerUseCase,
             exportStickerPackUseCase,
             saveMediaUseCase,
-            metadataResolver
+            metadataResolver,
+            myStickersRepository
         )
     }
 
@@ -91,7 +97,10 @@ class MediaDetailsViewModelTest {
         
         viewModel.onConfirmExport(pack)
         
-        assertTrue(events.first() is MediaDetailsEvent.LaunchIntent)
+        assertTrue(events.first() is MediaDetailsEvent.ExportToWhatsApp)
+        val event = events.first() as MediaDetailsEvent.ExportToWhatsApp
+        assertEquals("id", event.packId)
+        assertEquals("pkg", event.targetPackage)
         collectJob.cancel()
     }
 
@@ -105,11 +114,67 @@ class MediaDetailsViewModelTest {
     @Test
     fun onDownloadMediaUpdatesToError() = runTest(testDispatcher) {
         coEvery { saveMediaUseCase(any()) } returns Result.failure(Exception("Disk full"))
-        
+
         viewModel.init("url", "id")
         viewModel.onDownloadMedia()
-        
+
         assertTrue(viewModel.uiState.value.downloadState is DownloadState.Error)
         assertEquals("Disk full", (viewModel.uiState.value.downloadState as DownloadState.Error).message)
+    }
+
+    @Test
+    fun saveToMyStickersUpdatesToSuccess() = runTest(testDispatcher) {
+        val sticker = MySticker("id", "/path/img.jpg", SourceType.APP, 1000L)
+        coEvery { myStickersRepository.saveFromUrl(any(), any()) } returns Result.success(sticker)
+
+        viewModel.init("url", "id")
+        viewModel.saveToMyStickers()
+
+        assertTrue(viewModel.uiState.value.saveToMyStickersState is SaveToMyStickersState.Success)
+    }
+
+    @Test
+    fun saveToMyStickersUpdatesToError() = runTest(testDispatcher) {
+        coEvery { myStickersRepository.saveFromUrl(any(), any()) } returns Result.failure(Exception("Network error"))
+
+        viewModel.init("url", "id")
+        viewModel.saveToMyStickers()
+
+        assertTrue(viewModel.uiState.value.saveToMyStickersState is SaveToMyStickersState.Error)
+        assertEquals("Network error", (viewModel.uiState.value.saveToMyStickersState as SaveToMyStickersState.Error).message)
+    }
+
+    // Bug 2: "Save to My Stickers" must be hidden when media already comes from the local library
+    @Test
+    fun initWithFileUrl_setsIsLocalMediaTrue() = runTest(testDispatcher) {
+        viewModel.init("file:///data/user/0/com.example/files/my-stickers/img.jpg", "id")
+
+        assertTrue(viewModel.uiState.value.isLocalMedia)
+    }
+
+    @Test
+    fun initWithAbsolutePath_setsIsLocalMediaTrue() = runTest(testDispatcher) {
+        viewModel.init("/data/user/0/com.example/files/my-stickers/img.jpg", "id")
+
+        assertTrue(viewModel.uiState.value.isLocalMedia)
+    }
+
+    @Test
+    fun initWithHttpUrl_doesNotSetIsLocalMedia() = runTest(testDispatcher) {
+        viewModel.init("https://example.com/cat.gif", "id")
+
+        assertFalse(viewModel.uiState.value.isLocalMedia)
+    }
+
+    @Test
+    fun dismissSaveToMyStickersResetsState() = runTest(testDispatcher) {
+        val sticker = MySticker("id", "/path/img.jpg", SourceType.APP, 1000L)
+        coEvery { myStickersRepository.saveFromUrl(any(), any()) } returns Result.success(sticker)
+        viewModel.init("url", "id")
+        viewModel.saveToMyStickers()
+
+        viewModel.dismissSaveToMyStickers()
+
+        assertTrue(viewModel.uiState.value.saveToMyStickersState is SaveToMyStickersState.Idle)
     }
 }

@@ -1,10 +1,10 @@
 package com.gustavo.brilhante.cutestickers.stickers.data
 
+import com.gustavo.brilhante.cutestickers.common.Logger
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import android.util.Log
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -33,22 +33,21 @@ internal interface StickerStore {
     fun loadAllPacks(): List<StickerPackInfo>
     fun loadStickers(packId: String): List<StickerInfo>
     fun getStickerFile(packId: String, fileName: String): File
+    fun migrateIfNeeded()
 }
 
 @Singleton
 internal class StickerStoreImpl @Inject constructor(
-    @com.gustavo.brilhante.cutestickers.stickers.di.StickersDir override val stickersRoot: File
+    @com.gustavo.brilhante.cutestickers.stickers.di.StickersDir override val stickersRoot: File,
+    private val logger: Logger
 ) : StickerStore {
 
     companion object {
+        private const val TAG = "StickerStore"
         private val json = Json { ignoreUnknownKeys = true }
     }
 
-    init {
-        migrateOldPacks()
-    }
-
-    private fun migrateOldPacks() {
+    override fun migrateIfNeeded() {
         val files = stickersRoot.listFiles() ?: return
         val oldPacks = files.filter {
             it.isDirectory && it.name != "anim_pack" && it.name != "static_pack"
@@ -64,8 +63,9 @@ internal class StickerStoreImpl @Inject constructor(
                     val updatedPackInfo = packInfo.copy(id = newId)
                     try {
                         File(newPackDir, "pack_info.json").writeText(json.encodeToString(updatedPackInfo))
-                        Log.d("StickerStore", "Migrated pack from ${oldPackDir.name} to $newId")
+                        logger.d(TAG, "Migrated pack from ${oldPackDir.name} to $newId")
                     } catch (e: Exception) {
+                        logger.e(TAG, "Failed to write migrated pack info", e)
                     }
                 }
             } else {

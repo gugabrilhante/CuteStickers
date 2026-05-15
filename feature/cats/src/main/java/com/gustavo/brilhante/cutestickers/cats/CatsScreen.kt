@@ -29,12 +29,19 @@ fun CatsRoute(
     viewModel: CatsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
     val onboardingShown by preferencesManager.isOnboardingShown.collectAsState(initial = true)
     val scope = rememberCoroutineScope()
 
     DiscoverScreen(
         uiState = uiState,
-        onItemClick = onItemClick,
+        selectedIds = selectedIds,
+        onItemClick = { item ->
+            if (selectedIds.isNotEmpty()) viewModel.toggleSelection(item) else onItemClick(item)
+        },
+        onItemLongClick = viewModel::toggleSelection,
+        onClearSelection = viewModel::clearSelection,
+        onSaveSelectionToMyStickers = viewModel::saveSelectionToMyStickers,
         onRefresh = viewModel::refresh,
         onLoadMore = viewModel::loadMore,
         onAboutClick = onAboutClick,
@@ -50,6 +57,7 @@ fun CatsRoute(
             }
         },
         title = stringResource(id = UiR.string.cats),
+        offlinePlaceholderRes = UiR.drawable.ic_offline_cat,
         modifier = modifier
     )
 }

@@ -37,6 +37,7 @@ android {
 
 dependencies {
     implementation(project(":feature:stickers"))
+    implementation(project(":feature:my-stickers"))
     implementation(project(":core:ui"))
     implementation(project(":core:common"))
     implementation(project(":core:designsystem"))

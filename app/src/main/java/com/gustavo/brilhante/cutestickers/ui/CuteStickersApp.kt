@@ -25,6 +25,7 @@ import com.gustavo.brilhante.cutestickers.cats.CatsRoute
 import com.gustavo.brilhante.cutestickers.common.PreferencesManager
 import com.gustavo.brilhante.cutestickers.dogs.DogsRoute
 import com.gustavo.brilhante.cutestickers.mediadetails.MediaDetailsRoute
+import com.gustavo.brilhante.cutestickers.mystickers.MyStickersRoute
 import com.gustavo.brilhante.cutestickers.navigation.Navigator
 import com.gustavo.brilhante.cutestickers.navigation.Screen
 import com.gustavo.brilhante.cutestickers.navigation.rememberNavigationState
@@ -38,13 +39,17 @@ val LocalSharedTransitionScope = compositionLocalOf<SharedTransitionScope?> { nu
 fun CuteStickersApp(
     preferencesManager: PreferencesManager = hiltViewModel<AppViewModel>().preferencesManager
 ) {
-    val items = listOf(
-        Screen.Cats,
-        Screen.Dogs,
-    )
+    val items = remember {
+        listOf(
+            Screen.MyStickers,
+            Screen.Cats,
+            Screen.Dogs,
+        )
+    }
+    val topLevelRoutes = remember(items) { items.toSet() }
     val navigationState = rememberNavigationState(
-        startRoute = Screen.Cats,
-        topLevelRoutes = items.toSet()
+        startRoute = Screen.MyStickers,
+        topLevelRoutes = topLevelRoutes
     )
     val navigator = remember { Navigator(navigationState) }
 
@@ -67,6 +72,13 @@ fun CuteStickersApp(
                         sharedTransitionScope = LocalSharedTransitionScope.current!!,
                         animatedVisibilityScope = LocalNavAnimatedContentScope.current,
                         preferencesManager = preferencesManager
+                    )
+                }
+                entry<Screen.MyStickers> {
+                    MyStickersRoute(
+                        onItemClick = { item -> navigator.navigate(Screen.MediaDetails(item.url, item.id)) },
+                        sharedTransitionScope = LocalSharedTransitionScope.current!!,
+                        animatedVisibilityScope = LocalNavAnimatedContentScope.current
                     )
                 }
                 entry<Screen.About> {
@@ -95,21 +107,27 @@ fun CuteStickersApp(
                             val selected = screen == navigationState.topLevelRoute
                             NavigationBarItem(
                                 icon = {
-                                    Text(if (screen is Screen.Cats) "😸" else "🐶")
+                                    Text(
+                                        when (screen) {
+                                            Screen.Cats -> "😸"
+                                            Screen.Dogs -> "🐶"
+                                            Screen.MyStickers -> "⭐"
+                                            else -> ""
+                                        }
+                                    )
                                 },
                                 label = {
                                     Text(
-                                        if (screen is Screen.Cats) {
-                                            stringResource(UiR.string.cats)
-                                        } else {
-                                            stringResource(UiR.string.dogs)
+                                        when (screen) {
+                                            Screen.Cats -> stringResource(UiR.string.cats)
+                                            Screen.Dogs -> stringResource(UiR.string.dogs)
+                                            Screen.MyStickers -> stringResource(UiR.string.my_stickers)
+                                            else -> ""
                                         }
                                     )
                                 },
                                 selected = selected,
-                                onClick = {
-                                    navigator.navigate(screen)
-                                }
+                                onClick = { navigator.navigate(screen) }
                             )
                         }
                     }

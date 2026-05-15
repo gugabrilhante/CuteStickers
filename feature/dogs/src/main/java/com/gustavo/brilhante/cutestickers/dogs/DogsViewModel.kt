@@ -3,16 +3,22 @@ package com.gustavo.brilhante.cutestickers.dogs
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gustavo.brilhante.cutestickers.common.network.DogsApi
+import com.gustavo.brilhante.cutestickers.common.network.NetworkMonitor
 import com.gustavo.brilhante.cutestickers.domain.usecase.GetCachedMediaUseCase
 import com.gustavo.brilhante.cutestickers.domain.usecase.LoadNextPageUseCase
 import com.gustavo.brilhante.cutestickers.domain.usecase.RefreshMediaUseCase
+import com.gustavo.brilhante.cutestickers.model.MediaItem
+import com.gustavo.brilhante.cutestickers.mystickers.domain.MyStickersRepository
 import com.gustavo.brilhante.cutestickers.ui.DiscoverUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.net.UnknownHostException
 import javax.inject.Inject
@@ -21,40 +27,46 @@ import javax.inject.Inject
 class DogsViewModel @Inject constructor(
     @DogsApi private val getCachedMediaUseCase: GetCachedMediaUseCase,
     @DogsApi private val refreshMediaUseCase: RefreshMediaUseCase,
-    @DogsApi private val loadNextPageUseCase: LoadNextPageUseCase
+    @DogsApi private val loadNextPageUseCase: LoadNextPageUseCase,
+    private val myStickersRepository: MyStickersRepository,
+    private val networkMonitor: NetworkMonitor
 ) : ViewModel() {
 
     private val isRefreshing = MutableStateFlow(false)
     private val isLoadingMore = MutableStateFlow(false)
     private val errorState = MutableStateFlow<Pair<String, Boolean>?>(null)
+    private val _selectedIds = MutableStateFlow<Set<String>>(emptySet())
+    val selectedIds: StateFlow<Set<String>> = _selectedIds.asStateFlow()
 
     init {
-        refresh()
+        refresh(force = false)
     }
 
     val uiState: StateFlow<DiscoverUiState> = combine(
         getCachedMediaUseCase(),
         isRefreshing,
         isLoadingMore,
-        errorState
-    ) { items, refreshing, loadingMore, error ->
+        errorState,
+        networkMonitor.isOnline
+    ) { items, refreshing, loadingMore, error, isOnline ->
         when {
-            error != null && items.isEmpty() -> {
+            items.isNotEmpty() -> {
+                DiscoverUiState.Success(
+                    items = items,
+                    isRefreshing = refreshing,
+                    isLoadingMore = loadingMore,
+                    isOffline = !isOnline
+                )
+            }
+            error != null -> {
                 DiscoverUiState.Error(
                     message = error.first,
                     isNoInternet = error.second,
                     isRefreshing = refreshing
                 )
             }
-            items.isEmpty() -> {
-                DiscoverUiState.Loading
-            }
             else -> {
-                DiscoverUiState.Success(
-                    items = items,
-                    isRefreshing = refreshing,
-                    isLoadingMore = loadingMore
-                )
+                DiscoverUiState.Loading
             }
         }
     }.stateIn(
@@ -63,12 +75,14 @@ class DogsViewModel @Inject constructor(
         initialValue = DiscoverUiState.Loading
     )
 
-    fun refresh() {
+    fun refresh(force: Boolean = true) {
         viewModelScope.launch {
-            isRefreshing.value = true
+            val items = getCachedMediaUseCase().first()
+            if (force || items.isEmpty()) isRefreshing.value = true
             errorState.value = null
+            clearSelection()
             try {
-                refreshMediaUseCase()
+                refreshMediaUseCase(force)
             } catch (e: Exception) {
                 errorState.value = (e.message ?: "Failed to refresh") to (e is UnknownHostException)
             } finally {
@@ -88,6 +102,27 @@ class DogsViewModel @Inject constructor(
             } finally {
                 isLoadingMore.value = false
             }
+        }
+    }
+
+    fun toggleSelection(item: MediaItem) {
+        _selectedIds.update { current ->
+            if (item.id in current) current - item.id else current + item.id
+        }
+    }
+
+    fun clearSelection() {
+        _selectedIds.value = emptySet()
+    }
+
+    fun saveSelectionToMyStickers() {
+        val selectedCopy = _selectedIds.value.toSet()
+        if (selectedCopy.isEmpty()) return
+        clearSelection()
+        viewModelScope.launch {
+            getCachedMediaUseCase().first()
+                .filter { it.id in selectedCopy }
+                .forEach { item -> myStickersRepository.saveFromUrl(item.url, item.id) }
         }
     }
 }

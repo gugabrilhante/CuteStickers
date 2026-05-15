@@ -14,8 +14,8 @@ android {
         applicationId = "com.gustavo.brilhante.cutestickers"
         minSdk = 24
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.1.2"
+        versionCode = 6
+        versionName = "1.1.4"
 
         testInstrumentationRunner = "com.gustavo.brilhante.cutestickers.HiltTestRunner"
     }
@@ -50,6 +50,7 @@ dependencies {
     implementation(project(":feature:dogs"))
     implementation(project(":feature:media-details"))
     implementation(project(":feature:stickers"))
+    implementation(project(":feature:my-stickers"))
     implementation(project(":core:designsystem"))
     implementation(project(":core:ui"))
     implementation(project(":core:common"))

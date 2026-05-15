@@ -20,4 +20,6 @@ class DogLocalDataSource @Inject constructor(
     override suspend fun clear() {
         dogDao.clearDogs()
     }
+
+    override suspend fun isEmpty(): Boolean = dogDao.getCount() == 0
 }
