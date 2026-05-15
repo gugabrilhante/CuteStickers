@@ -77,7 +77,8 @@ class CatsViewModel @Inject constructor(
 
     fun refresh(force: Boolean = true) {
         viewModelScope.launch {
-            if (force) isRefreshing.value = true
+            val items = getCachedMediaUseCase().first()
+            if (force || items.isEmpty()) isRefreshing.value = true
             errorState.value = null
             clearSelection()
             try {
