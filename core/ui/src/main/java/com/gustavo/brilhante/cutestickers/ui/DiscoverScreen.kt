@@ -218,7 +218,6 @@ fun DiscoverScreen(
                     text = { Text(stringResource(UiR.string.save_selection)) },
                     modifier = Modifier
                         .testTag("save_selection_fab")
-                        .offset(y = 20.dp)
                 )
             }
         }
@@ -258,7 +257,7 @@ fun DiscoverScreen(
                                 start = 8.dp,
                                 end = 8.dp,
                                 top = 8.dp,
-                                bottom = innerPadding.calculateBottomPadding() + 8.dp
+                                bottom = innerPadding.calculateBottomPadding() + 80.dp
                             ),
                             modifier = Modifier.fillMaxSize()
                         ) {

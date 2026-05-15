@@ -7,6 +7,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +26,6 @@ import org.junit.Test
 class MyStickersViewModelTest {
 
     private val repository = mockk<MyStickersRepository>()
-    private val cropImageProcessor = mockk<CropImageProcessor>()
     private val stickersFlow = MutableStateFlow<List<MySticker>>(emptyList())
     private val testDispatcher = UnconfinedTestDispatcher()
 
@@ -35,7 +35,7 @@ class MyStickersViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         every { repository.getStickers() } returns stickersFlow
-        viewModel = MyStickersViewModel(repository, cropImageProcessor)
+        viewModel = MyStickersViewModel(repository)
     }
 
     @After

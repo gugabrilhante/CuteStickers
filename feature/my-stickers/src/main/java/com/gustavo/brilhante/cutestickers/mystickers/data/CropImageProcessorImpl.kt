@@ -52,8 +52,11 @@ internal class CropImageProcessorImpl @Inject constructor(
         val matrix = Matrix().apply { postRotate(rotation) }
         val rotated = Bitmap.createBitmap(source, 0, 0, source.width, source.height, matrix, true)
         val cropped = Bitmap.createBitmap(rotated, x, y, size, size)
-        val f = File(context.cacheDir, "crop_${timeProvider.getCurrentTimeMillis()}.jpg")
-        FileOutputStream(f).use { cropped.compress(Bitmap.CompressFormat.JPEG, 95, it) }
+        val transparent = source.hasAlpha()
+        val ext = if (transparent) "png" else "jpg"
+        val format = if (transparent) Bitmap.CompressFormat.PNG else Bitmap.CompressFormat.JPEG
+        val f = File(context.cacheDir, "crop_${timeProvider.getCurrentTimeMillis()}.$ext")
+        FileOutputStream(f).use { cropped.compress(format, if (transparent) 0 else 95, it) }
         if (rotated !== source) rotated.recycle()
         cropped.recycle()
         Uri.fromFile(f)

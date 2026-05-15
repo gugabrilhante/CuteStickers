@@ -73,7 +73,8 @@ fun MyStickersRoute(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier,
-    viewModel: MyStickersViewModel = hiltViewModel()
+    viewModel: MyStickersViewModel = hiltViewModel(),
+    imageCropViewModel: ImageCropViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -118,9 +119,9 @@ fun MyStickersRoute(
     )
 
     pendingCropUri?.let { uri ->
+        LaunchedEffect(uri) { imageCropViewModel.loadImage(uri) }
         ImageCropScreen(
-            sourceUri = uri,
-            processor = viewModel.cropImageProcessor,
+            viewModel = imageCropViewModel,
             onCropComplete = { croppedUri ->
                 pendingCropUri = null
                 viewModel.importFromGallery(croppedUri.toString())

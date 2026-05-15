@@ -8,4 +8,7 @@
     <string name="saved_to_my_stickers">Salvo em Meus stickers!</string>
     <string name="delete_selected">Apagar selecionados</string>
     <string name="gallery">Galeria</string>
+    <string name="original_photo">Foto Original</string>
+    <string name="auto_cut">Recorte Auto ✨</string>
+    <string name="auto_cut_failed">Não foi possível detectar o assunto. Usando original.</string>
 </resources>

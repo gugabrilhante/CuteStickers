@@ -44,7 +44,10 @@ internal class MyStickersRepositoryImpl @Inject constructor(
         withContext(ioDispatcher) {
             runCatching {
                 val id = UUID.randomUUID().toString()
-                val file = File(stickersDir, "$id.jpg")
+                // Preserve PNG extension so transparency (Alpha channel) is not lost on re-encode
+                val isPng = uriString.endsWith(".png", ignoreCase = true)
+                val ext = if (isPng) "png" else "jpg"
+                val file = File(stickersDir, "$id.$ext")
 
                 val bytes = when {
                     uriString.startsWith("file://") -> File(uriString.removePrefix("file://")).readBytes()
@@ -56,7 +59,8 @@ internal class MyStickersRepositoryImpl @Inject constructor(
                     }
                 }
 
-                file.writeBytes(normalizeExifOrientation(bytes))
+                // Skip EXIF normalization for PNG files — the crop already baked-in the rotation
+                file.writeBytes(if (isPng) bytes else normalizeExifOrientation(bytes))
 
                 val sticker = MySticker(
                     id = id,
