@@ -52,7 +52,7 @@ internal class StickerRepositoryImpl @Inject constructor(
                     .getOrThrow()
             }
 
-            val trayFile = File(fileManager.packDir(packId), "tray_icon.webp")
+            val trayFile = File(fileManager.packDir(packId), "tray_icon.png")
             imageProcessor.downloadAndProcess(imageUrl, trayFile, ImageProcessor.TRAY_SIZE, isCropped)
                 .getOrThrow()
 
@@ -87,7 +87,7 @@ internal class StickerRepositoryImpl @Inject constructor(
                 trayImageFileName = trayFile.name,
                 stickers = updatedStickers,
                 isAnimated = isAnimated,
-                version = timeProvider.getCurrentTimeMillis().toString()
+                version = System.currentTimeMillis().toString()
             )
             stickerStore.savePack(packInfo)
 

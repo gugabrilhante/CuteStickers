@@ -7,7 +7,8 @@ import javax.inject.Singleton
 @Singleton
 class MediaMetadataResolver @Inject constructor() {
     fun getMediaType(url: String): MediaType {
-        return if (url.lowercase().contains("gif")) {
+        val lower = url.lowercase()
+        return if (lower.contains("gif") || lower.contains(".webp")) {
             MediaType.Animated
         } else {
             MediaType.Static

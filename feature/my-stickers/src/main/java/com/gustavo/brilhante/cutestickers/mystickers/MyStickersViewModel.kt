@@ -2,6 +2,7 @@ package com.gustavo.brilhante.cutestickers.mystickers
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gustavo.brilhante.cutestickers.model.MediaType
 import com.gustavo.brilhante.cutestickers.model.MediaItem
 import com.gustavo.brilhante.cutestickers.mystickers.domain.MySticker
 import com.gustavo.brilhante.cutestickers.mystickers.domain.MyStickersRepository
@@ -57,12 +58,12 @@ class MyStickersViewModel @Inject constructor(
         initialValue = MyStickersUiState.Loading
     )
 
-    fun importFromGallery(uriString: String) {
+    fun importFromGallery(uriString: String, mediaType: MediaType = MediaType.Static) {
         if (isImporting.value) return
         viewModelScope.launch {
             isImporting.value = true
             importError.value = null
-            repository.saveFromUri(uriString)
+            repository.saveFromUri(uriString, mediaType)
                 .onFailure { e -> importError.value = e.message ?: "Failed to import image" }
             isImporting.value = false
         }
@@ -92,4 +93,4 @@ class MyStickersViewModel @Inject constructor(
     }
 }
 
-private fun MySticker.toMediaItem() = MediaItem(id = id, url = "file://$localPath")
+private fun MySticker.toMediaItem() = MediaItem(id = id, url = "file://$localPath", type = mediaType)

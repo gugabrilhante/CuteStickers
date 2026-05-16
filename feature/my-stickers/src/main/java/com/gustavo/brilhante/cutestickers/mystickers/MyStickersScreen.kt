@@ -31,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -79,11 +80,19 @@ fun MyStickersRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var pendingCropUri by remember { mutableStateOf<Uri?>(null) }
+    var pendingVideoUri by remember { mutableStateOf<Uri?>(null) }
+    var showImportChooser by remember { mutableStateOf(false) }
 
-    val galleryLauncher = rememberLauncherForActivityResult(
+    val imageLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         uri?.let { pendingCropUri = it }
+    }
+
+    val videoLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let { pendingVideoUri = it }
     }
 
     if (uiState is MyStickersUiState.Success) {
@@ -106,9 +115,7 @@ fun MyStickersRoute(
             if (isInSelectionMode) viewModel.toggleSelection(item.id) else onItemClick(item)
         },
         onImportClick = {
-            galleryLauncher.launch(
-                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-            )
+            showImportChooser = true
         },
         onItemLongClick = { item -> viewModel.toggleSelection(item.id) },
         onDeleteSelected = viewModel::deleteSelected,
@@ -117,6 +124,19 @@ fun MyStickersRoute(
         animatedVisibilityScope = animatedVisibilityScope,
         modifier = modifier
     )
+
+    if (showImportChooser) {
+        ImportTypeChooser(
+            onTypeSelected = { type ->
+                showImportChooser = false
+                when (type) {
+                    ImportType.IMAGE -> imageLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    ImportType.VIDEO -> videoLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly))
+                }
+            },
+            onDismiss = { showImportChooser = false }
+        )
+    }
 
     pendingCropUri?.let { uri ->
         LaunchedEffect(uri) { imageCropViewModel.loadImage(uri) }
@@ -129,6 +149,43 @@ fun MyStickersRoute(
             onDismiss = { pendingCropUri = null }
         )
     }
+
+    pendingVideoUri?.let { uri ->
+        val trimViewModel: TrimVideoViewModel = hiltViewModel()
+        LaunchedEffect(uri) { trimViewModel.loadVideo(uri) }
+        TrimVideoScreen(
+            viewModel = trimViewModel,
+            onTrimComplete = { processedUri ->
+                pendingVideoUri = null
+                viewModel.importFromGallery(processedUri.toString(), com.gustavo.brilhante.cutestickers.model.MediaType.Animated)
+            },
+            onDismiss = { pendingVideoUri = null }
+        )
+    }
+}
+
+enum class ImportType { IMAGE, VIDEO }
+
+@Composable
+fun ImportTypeChooser(
+    onTypeSelected: (ImportType) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Import Sticker") },
+        text = { Text("Choose the type of sticker you want to create") },
+        confirmButton = {
+            Button(onClick = { onTypeSelected(ImportType.IMAGE) }) {
+                Text("Image")
+            }
+        },
+        dismissButton = {
+            Button(onClick = { onTypeSelected(ImportType.VIDEO) }) {
+                Text("Video")
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)

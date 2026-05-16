@@ -9,6 +9,7 @@ import android.net.Uri
 import com.gustavo.brilhante.cutestickers.common.TimeProvider
 import com.gustavo.brilhante.cutestickers.common.network.CatsDispatchers
 import com.gustavo.brilhante.cutestickers.common.network.Dispatcher
+import com.gustavo.brilhante.cutestickers.model.MediaType
 import com.gustavo.brilhante.cutestickers.mystickers.domain.MySticker
 import com.gustavo.brilhante.cutestickers.mystickers.domain.MyStickersRepository
 import com.gustavo.brilhante.cutestickers.mystickers.domain.SourceType
@@ -40,13 +41,18 @@ internal class MyStickersRepositoryImpl @Inject constructor(
     override fun getStickers(): Flow<List<MySticker>> =
         dao.getStickers().map { entities -> entities.map { it.toDomain() } }
 
-    override suspend fun saveFromUri(uriString: String): Result<MySticker> =
+    override suspend fun saveFromUri(uriString: String, mediaType: MediaType): Result<MySticker> =
         withContext(ioDispatcher) {
             runCatching {
                 val id = UUID.randomUUID().toString()
-                // Preserve PNG extension so transparency (Alpha channel) is not lost on re-encode
+                // Preserve PNG/WebP extension so transparency (Alpha channel) is not lost on re-encode
                 val isPng = uriString.endsWith(".png", ignoreCase = true)
-                val ext = if (isPng) "png" else "jpg"
+                val isWebp = uriString.endsWith(".webp", ignoreCase = true)
+                val ext = when {
+                    isPng -> "png"
+                    isWebp -> "webp"
+                    else -> "jpg"
+                }
                 val file = File(stickersDir, "$id.$ext")
 
                 val bytes = when {
@@ -59,14 +65,15 @@ internal class MyStickersRepositoryImpl @Inject constructor(
                     }
                 }
 
-                // Skip EXIF normalization for PNG files — the crop already baked-in the rotation
-                file.writeBytes(if (isPng) bytes else normalizeExifOrientation(bytes))
+                // Skip EXIF normalization for PNG/WebP files
+                file.writeBytes(if (isPng || isWebp) bytes else normalizeExifOrientation(bytes))
 
                 val sticker = MySticker(
                     id = id,
                     localPath = file.absolutePath,
                     sourceType = SourceType.GALLERY,
-                    createdAt = timeProvider.getCurrentTimeMillis()
+                    createdAt = timeProvider.getCurrentTimeMillis(),
+                    mediaType = mediaType
                 )
                 dao.insert(sticker.toEntity())
                 sticker

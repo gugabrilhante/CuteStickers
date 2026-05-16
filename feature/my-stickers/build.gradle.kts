@@ -61,6 +61,10 @@ dependencies {
     implementation(libs.dagger.hilt.android)
     ksp(libs.dagger.hilt.compiler)
     implementation(libs.coil.compose)
+    implementation(libs.webp.android)
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.ui)
+    implementation(libs.androidx.media3.common)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

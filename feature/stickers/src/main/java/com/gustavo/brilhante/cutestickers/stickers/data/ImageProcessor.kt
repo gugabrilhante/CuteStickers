@@ -58,6 +58,13 @@ internal open class ImageProcessor @Inject constructor(
         isCropped: Boolean = true
     ): Result<File> = runCatching {
         val bytes = runBlocking { downloader.download(imageUrl).getOrThrow() }
+        
+        // If it's already a WebP and we don't need to crop/resize, just copy it
+        if (imageUrl.lowercase().endsWith(".webp") && !isCropped && size == STICKER_SIZE) {
+            outputFile.writeBytes(bytes)
+            return@runCatching outputFile
+        }
+
         val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
             ?: error("Failed to decode image from bytes")
 
@@ -81,16 +88,30 @@ internal open class ImageProcessor @Inject constructor(
     ): Result<File> = runCatching {
         val bytes = runBlocking { downloader.download(imageUrl).getOrThrow() }
         
-        logger.d(TAG, "Original GIF size: ${bytes.size / 1024} KB")
+        // If it's already a WebP and we don't need to crop, just copy it
+        if (imageUrl.lowercase().endsWith(".webp") && !isCropped) {
+            outputFile.writeBytes(bytes)
+            return@runCatching outputFile
+        }
+
+        logger.d(TAG, "Original animation size: ${bytes.size / 1024} KB")
 
         val tempInput = File.createTempFile("raw_anim", ".bin").apply { writeBytes(bytes) }
         
         var finalResult: File? = null
 
+        // Check if input is already WebP
+        val isWebP = imageUrl.lowercase().endsWith(".webp")
+
         for (config in compressionPipeline) {
             logger.d(TAG, "Compression attempt ${config.attempt}: scale=${config.scale}, quality=${config.quality}")
             
-            val encoded = encodeAnimatedWebP(tempInput, config, isCropped)
+            val encoded = if (isWebP) {
+                // If it's already a WebP, we might still need to crop or compress further
+                encodeAnimatedWebP(tempInput, config, isCropped)
+            } else {
+                encodeAnimatedWebP(tempInput, config, isCropped)
+            }
             
             logger.d(TAG, "Encoded sticker size: ${encoded.length() / 1024} KB")
             
@@ -123,17 +144,25 @@ internal open class ImageProcessor @Inject constructor(
             
             var currentTimeMs = 0L
             processedFrames.forEach { frame ->
-                val transformed = if (isCropped) centerCrop(frame.bitmap, config.scale) else resizeWithPadding(frame.bitmap, config.scale)
-                encoder.addFrame(currentTimeMs, transformed)
-                currentTimeMs += frame.durationMs.toLong()
-                transformed.recycle()
+                if (!frame.bitmap.isRecycled) {
+                    val transformed = if (isCropped) centerCrop(frame.bitmap, config.scale) else resizeWithPadding(frame.bitmap, config.scale)
+                    encoder.addFrame(currentTimeMs, transformed)
+                    currentTimeMs += frame.durationMs.toLong()
+                    if (transformed != frame.bitmap) {
+                        transformed.recycle()
+                    }
+                }
             }
             
             // Log encoded metadata to verify against WhatsApp limits
             logger.d(TAG, "Encoded: frames=${processedFrames.size}, totalTime=${currentTimeMs}ms, avgDelay=${if(processedFrames.isNotEmpty()) currentTimeMs/processedFrames.size else 0}ms")
             
+            // For static fallback and general assemble logic:
+            // WhatsApp requires the total duration to be the sum of frame delays.
+            // We ensure we don't exceed 5000ms strictly.
+            val finalDuration = currentTimeMs.coerceAtMost(5000L)
             val outputUri = android.net.Uri.fromFile(tempOutput)
-            encoder.assemble(currentTimeMs, outputUri)
+            encoder.assemble(finalDuration, outputUri)
             encoder.release()
         } catch (e: Exception) {
             logger.e(TAG, "Error encoding animated WebP", e)
@@ -141,7 +170,7 @@ internal open class ImageProcessor @Inject constructor(
             val transformed = if (isCropped) centerCrop(bitmap, config.scale) else resizeWithPadding(bitmap, config.scale)
             saveAsWebP(transformed, tempOutput, ANIMATED_STICKER_MAX_BYTES)
         } finally {
-            processedFrames.forEach { it.bitmap.recycle() }
+            frames.forEach { it.bitmap.recycle() }
         }
         
         return tempOutput
@@ -151,6 +180,32 @@ internal open class ImageProcessor @Inject constructor(
         val frames = mutableListOf<Frame>()
         try {
             val bytes = file.readBytes()
+            
+            // Try decoding as WebP first if it's an animated WebP
+            try {
+                val decoder = com.aureusapps.android.webpandroid.decoder.WebPDecoder(context)
+                decoder.setDataSource(android.net.Uri.fromFile(file))
+                val info = decoder.decodeInfo()
+                if (info.frameCount > 0) {
+                    logger.d(TAG, "Decoding as WebP: frames=${info.frameCount}")
+                    var lastTimestamp = 0
+                    while (decoder.hasNextFrame()) {
+                        val result = decoder.decodeNextFrame()
+                        result.frame?.let { bitmap ->
+                            val duration = result.timestamp - lastTimestamp
+                            val frameCopy = bitmap.copy(bitmap.config ?: Bitmap.Config.ARGB_8888, true)
+                            frames.add(Frame(frameCopy, duration))
+                            lastTimestamp = result.timestamp
+                        }
+                    }
+                    decoder.release()
+                    return frames
+                }
+                decoder.release()
+            } catch (e: Exception) {
+                // Not a WebP or failed to decode as WebP
+            }
+
             @Suppress("DEPRECATION")
             val movie = android.graphics.Movie.decodeByteArray(bytes, 0, bytes.size)
             
@@ -186,6 +241,32 @@ internal open class ImageProcessor @Inject constructor(
                     frames.add(Frame(lastBitmap, duration - lastFrameTime))
                 }
                 logger.d(TAG, "Decoded: frames=${frames.size}, delays=${frames.map { it.durationMs }}")
+                return frames
+            }
+
+            // Try as Video
+            val retriever = android.media.MediaMetadataRetriever()
+            try {
+                retriever.setDataSource(file.absolutePath)
+                val durationStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
+                val duration = durationStr?.toLong() ?: 0L
+                if (duration > 0) {
+                    val frameCount = 20
+                    val intervalUs = (duration * 1000) / frameCount
+                    for (i in 0 until frameCount) {
+                        retriever.getFrameAtTime(i * intervalUs, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)?.let {
+                            frames.add(Frame(it, (duration / frameCount).toInt()))
+                        }
+                    }
+                    if (frames.isNotEmpty()) {
+                        logger.d(TAG, "Decoded as video: frames=${frames.size}")
+                        return frames
+                    }
+                }
+            } catch (e: Exception) {
+                // Not a video
+            } finally {
+                retriever.release()
             }
         } catch (e: Exception) {
             logger.e(TAG, "Error decoding frames", e)
@@ -203,9 +284,13 @@ internal open class ImageProcessor @Inject constructor(
 
     private fun processFrames(frames: List<Frame>, config: CompressionConfig): List<Frame> {
         val minDelay = 80 // WhatsApp recommended minimum delay
-        val maxDuration = 4800 // WhatsApp limit 5s (using 4.8s as safety)
+        val maxDuration = 4500 // WhatsApp limit 5s (using 4.5s for strict safety)
         val maxFrames = 25 // WhatsApp safe limit (max is 50, but 25 is better for size/compat)
         
+        // WhatsApp animated stickers MUST be square.
+        // We ensure all input frames are processed through centerCrop or resizeWithPadding
+        // which is already handled in encodeAnimatedWebP before adding to encoder.
+
         var result = frames.filterIndexed { index, _ -> index % config.dropFramesRatio == 0 }
         
         // 1. Ensure minimum delay per frame
@@ -231,11 +316,11 @@ internal open class ImageProcessor @Inject constructor(
             result = result.map { it.copy(durationMs = (it.durationMs * factor).toInt().coerceAtLeast(minDelay)) }
         }
         
-        // Final duration check
+        // Final duration check and strict adjustment
         currentTotal = result.sumOf { it.durationMs }
         if (currentTotal > maxDuration) {
-            // Force last reduction if still over
             val over = currentTotal - maxDuration
+            // Distribute reduction across frames
             val perFrame = (over / result.size) + 1
             result = result.map { it.copy(durationMs = (it.durationMs - perFrame).coerceAtLeast(minDelay)) }
         }

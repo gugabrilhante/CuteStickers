@@ -36,7 +36,9 @@ internal abstract class MyStickersModule {
         @Provides
         @Singleton
         fun provideMyStickersDatabase(@ApplicationContext context: Context): MyStickerDatabase =
-            Room.databaseBuilder(context, MyStickerDatabase::class.java, "my_stickers_database").build()
+            Room.databaseBuilder(context, MyStickerDatabase::class.java, "my_stickers_database")
+                .fallbackToDestructiveMigration(true)
+                .build()
 
         @Provides
         fun provideMyStickerDao(db: MyStickerDatabase): MyStickerDao = db.myStickerDao()
