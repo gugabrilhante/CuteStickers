@@ -158,6 +158,7 @@ fun TrimVideoScreen(
                             containerWidth = containerSize.width,
                             containerHeight = containerSize.height,
                             cropRect = uiState.cropRect,
+                            isSquare = uiState.isSquareCrop,
                             onCropChanged = viewModel::onCropChanged
                         )
                     }
@@ -183,19 +184,41 @@ fun TrimVideoScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Time Indicator
-                val currentRelPos = (currentPosition - uiState.startTimeMs).coerceAtLeast(0)
-                val totalSelected = (uiState.endTimeMs - uiState.startTimeMs).coerceAtLeast(0)
-                
-                val currentSec = (currentRelPos / 1000).toInt()
-                val totalSec = (totalSelected / 1000).toInt()
-                
-                Text(
-                    text = String.format(Locale.getDefault(), "%02d:%02d / %02d:%02d", currentSec / 60, currentSec % 60, totalSec / 60, totalSec % 60),
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
-                )
+                // Toolbar Area
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Time Indicator
+                    val currentRelPos = (currentPosition - uiState.startTimeMs).coerceAtLeast(0)
+                    val totalSelected = (uiState.endTimeMs - uiState.startTimeMs).coerceAtLeast(0)
+                    
+                    val currentSec = (currentRelPos / 1000).toInt()
+                    val totalSec = (totalSelected / 1000).toInt()
+                    
+                    Text(
+                        text = String.format(Locale.getDefault(), "%02d:%02d / %02d:%02d", currentSec / 60, currentSec % 60, totalSec / 60, totalSec % 60),
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+
+                    Button(
+                        onClick = { viewModel.toggleSquareCrop() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (uiState.isSquareCrop) MaterialTheme.colorScheme.primary else Color.DarkGray,
+                            contentColor = if (uiState.isSquareCrop) MaterialTheme.colorScheme.onPrimary else Color.White
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        modifier = Modifier.height(32.dp)
+                    ) {
+                        Text("1:1", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
 
                 VideoTrimmer(
                     durationMs = uiState.durationMs,
@@ -231,6 +254,7 @@ fun CropOverlay(
     containerWidth: Int,
     containerHeight: Int,
     cropRect: android.graphics.RectF,
+    isSquare: Boolean = false,
     onCropChanged: (android.graphics.RectF) -> Unit
 ) {
     // Calculate actual video display size in the container (Fit center)
@@ -254,7 +278,7 @@ fun CropOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .pointerInput(displayW, displayH) {
+            .pointerInput(displayW, displayH, isSquare) {
                 detectDragGestures(
                     onDragStart = { offset ->
                         val rect = Rect(
@@ -279,23 +303,78 @@ fun CropOverlay(
                         val deltaY = dragAmount.y / displayH
                         val newRect = android.graphics.RectF(currentCropRect)
                         val minSize = 0.1f
+                        val vWidth = videoWidth.toFloat()
+                        val vHeight = videoHeight.toFloat()
 
                         when (handle) {
                             DragHandle.TopLeft -> {
-                                newRect.left = (newRect.left + deltaX).coerceIn(0f, newRect.right - minSize)
-                                newRect.top = (newRect.top + deltaY).coerceIn(0f, newRect.bottom - minSize)
+                                if (isSquare) {
+                                    val dX = deltaX
+                                    val dY = dX * vWidth / vHeight
+                                    newRect.left = (newRect.left + dX).coerceIn(0f, newRect.right - minSize)
+                                    newRect.top = (newRect.top + dY).coerceIn(0f, newRect.bottom - minSize)
+                                    
+                                    // Re-adjust if top went out of bounds
+                                    if (newRect.top == 0f || newRect.top >= newRect.bottom - minSize) {
+                                        val actualDY = newRect.top - currentCropRect.top
+                                        val actualDX = actualDY * vHeight / vWidth
+                                        newRect.left = currentCropRect.left + actualDX
+                                    }
+                                } else {
+                                    newRect.left = (newRect.left + deltaX).coerceIn(0f, newRect.right - minSize)
+                                    newRect.top = (newRect.top + deltaY).coerceIn(0f, newRect.bottom - minSize)
+                                }
                             }
                             DragHandle.TopRight -> {
-                                newRect.right = (newRect.right + deltaX).coerceIn(newRect.left + minSize, 1f)
-                                newRect.top = (newRect.top + deltaY).coerceIn(0f, newRect.bottom - minSize)
+                                if (isSquare) {
+                                    val dX = deltaX
+                                    val dY = -dX * vWidth / vHeight
+                                    newRect.right = (newRect.right + dX).coerceIn(newRect.left + minSize, 1f)
+                                    newRect.top = (newRect.top + dY).coerceIn(0f, newRect.bottom - minSize)
+                                    
+                                    if (newRect.top == 0f || newRect.top >= newRect.bottom - minSize) {
+                                        val actualDY = newRect.top - currentCropRect.top
+                                        val actualDX = -actualDY * vHeight / vWidth
+                                        newRect.right = currentCropRect.right + actualDX
+                                    }
+                                } else {
+                                    newRect.right = (newRect.right + deltaX).coerceIn(newRect.left + minSize, 1f)
+                                    newRect.top = (newRect.top + deltaY).coerceIn(0f, newRect.bottom - minSize)
+                                }
                             }
                             DragHandle.BottomLeft -> {
-                                newRect.left = (newRect.left + deltaX).coerceIn(0f, newRect.right - minSize)
-                                newRect.bottom = (newRect.bottom + deltaY).coerceIn(newRect.top + minSize, 1f)
+                                if (isSquare) {
+                                    val dX = deltaX
+                                    val dY = -dX * vWidth / vHeight
+                                    newRect.left = (newRect.left + dX).coerceIn(0f, newRect.right - minSize)
+                                    newRect.bottom = (newRect.bottom + dY).coerceIn(newRect.top + minSize, 1f)
+                                    
+                                    if (newRect.bottom == 1f || newRect.bottom <= newRect.top + minSize) {
+                                        val actualDY = newRect.bottom - currentCropRect.bottom
+                                        val actualDX = -actualDY * vHeight / vWidth
+                                        newRect.left = currentCropRect.left + actualDX
+                                    }
+                                } else {
+                                    newRect.left = (newRect.left + deltaX).coerceIn(0f, newRect.right - minSize)
+                                    newRect.bottom = (newRect.bottom + deltaY).coerceIn(newRect.top + minSize, 1f)
+                                }
                             }
                             DragHandle.BottomRight -> {
-                                newRect.right = (newRect.right + deltaX).coerceIn(newRect.left + minSize, 1f)
-                                newRect.bottom = (newRect.bottom + deltaY).coerceIn(newRect.top + minSize, 1f)
+                                if (isSquare) {
+                                    val dX = deltaX
+                                    val dY = dX * vWidth / vHeight
+                                    newRect.right = (newRect.right + dX).coerceIn(newRect.left + minSize, 1f)
+                                    newRect.bottom = (newRect.bottom + dY).coerceIn(newRect.top + minSize, 1f)
+                                    
+                                    if (newRect.bottom == 1f || newRect.bottom <= newRect.top + minSize) {
+                                        val actualDY = newRect.bottom - currentCropRect.bottom
+                                        val actualDX = actualDY * vHeight / vWidth
+                                        newRect.right = currentCropRect.right + actualDX
+                                    }
+                                } else {
+                                    newRect.right = (newRect.right + deltaX).coerceIn(newRect.left + minSize, 1f)
+                                    newRect.bottom = (newRect.bottom + deltaY).coerceIn(newRect.top + minSize, 1f)
+                                }
                             }
                             DragHandle.Center -> {
                                 val width = newRect.width()

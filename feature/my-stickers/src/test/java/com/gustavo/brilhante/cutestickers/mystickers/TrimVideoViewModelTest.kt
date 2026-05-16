@@ -44,7 +44,6 @@ class TrimVideoViewModelTest {
     @Test
     fun `loadVideo updates duration and trim points`() {
         val uri = mockk<Uri>()
-        val retriever = mockk<MediaMetadataRetriever>(relaxed = true)
         every { anyConstructed<MediaMetadataRetriever>().setDataSource(any<Context>(), any()) } returns Unit
         every { anyConstructed<MediaMetadataRetriever>().extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION) } returns "10000"
         
@@ -73,5 +72,33 @@ class TrimVideoViewModelTest {
 
         val state = viewModel.uiState.value
         assertTrue(state.isDurationValid)
+    }
+
+    @Test
+    fun `toggleSquareCrop updates state and makes crop rect square`() = runTest {
+        // Setup a landscape video state
+        val uri = mockk<Uri>()
+        every { anyConstructed<MediaMetadataRetriever>().setDataSource(any<Context>(), any()) } returns Unit
+        every { anyConstructed<MediaMetadataRetriever>().extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION) } returns "5000"
+        every { anyConstructed<MediaMetadataRetriever>().extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH) } returns "2000"
+        every { anyConstructed<MediaMetadataRetriever>().extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT) } returns "1000"
+        
+        viewModel.loadVideo(uri)
+        
+        // Initial state should be non-square (though getDefaultCropRect might make it square, let's verify)
+        assertFalse(viewModel.uiState.value.isSquareCrop)
+
+        // Toggle ON
+        viewModel.toggleSquareCrop()
+        assertTrue(viewModel.uiState.value.isSquareCrop)
+        
+        val rect = viewModel.uiState.value.cropRect
+        // width_px = rect.width() * 2000, height_px = rect.height() * 1000
+        // For square: rect.width() * 2000 == rect.height() * 1000 => rect.width() * 2 == rect.height()
+        assertEquals(rect.height(), rect.width() * 2f, 0.01f)
+
+        // Toggle OFF
+        viewModel.toggleSquareCrop()
+        assertFalse(viewModel.uiState.value.isSquareCrop)
     }
 }

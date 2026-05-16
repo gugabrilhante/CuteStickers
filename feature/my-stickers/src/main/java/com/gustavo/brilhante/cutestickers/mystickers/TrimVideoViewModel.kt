@@ -23,7 +23,8 @@ data class TrimVideoUiState(
     val thumbnails: List<Bitmap> = emptyList(),
     val cropRect: android.graphics.RectF = android.graphics.RectF(0f, 0f, 1f, 1f),
     val videoWidth: Int = 0,
-    val videoHeight: Int = 0
+    val videoHeight: Int = 0,
+    val isSquareCrop: Boolean = false
 )
 
 @HiltViewModel
@@ -77,11 +78,11 @@ class TrimVideoViewModel @Inject constructor(
         return if (width > height) {
             val side = height.toFloat() / width
             val left = (1f - side) / 2f
-            android.graphics.RectF(left, 0.1f, left + side, 0.9f) // Leave some margin
+            android.graphics.RectF(left, 0f, left + side, 1f)
         } else {
             val side = width.toFloat() / height
             val top = (1f - side) / 2f
-            android.graphics.RectF(0.1f, top, 0.9f, top + side) // Leave some margin
+            android.graphics.RectF(0f, top, 1f, top + side)
         }
     }
 
@@ -92,6 +93,47 @@ class TrimVideoViewModel @Inject constructor(
 
     fun onCropChanged(rect: android.graphics.RectF) {
         _uiState.update { it.copy(cropRect = rect) }
+    }
+
+    fun toggleSquareCrop() {
+        _uiState.update { state ->
+            val isSquare = !state.isSquareCrop
+            if (isSquare) {
+                val currentRect = state.cropRect
+                val videoWidth = state.videoWidth.toFloat()
+                val videoHeight = state.videoHeight.toFloat()
+                
+                if (videoWidth == 0f || videoHeight == 0f) return@update state.copy(isSquareCrop = isSquare)
+
+                val centerH = currentRect.centerX()
+                val centerV = currentRect.centerY()
+                
+                // Try to keep the same area or at least a reasonable size
+                var newWidth = currentRect.width()
+                var newHeight = newWidth * videoWidth / videoHeight
+                
+                if (newHeight > 1f) {
+                    newHeight = currentRect.height()
+                    newWidth = newHeight * videoHeight / videoWidth
+                }
+                
+                if (newWidth > 1f) { // Should not happen if videoWidth/videoHeight is correct
+                     newWidth = 1f
+                     newHeight = newWidth * videoWidth / videoHeight
+                }
+
+                val left = (centerH - newWidth / 2).coerceIn(0f, 1f - newWidth)
+                val top = (centerV - newHeight / 2).coerceIn(0f, 1f - newHeight)
+                
+                state.copy(
+                    isSquareCrop = isSquare,
+                    cropRect = android.graphics.RectF(left, top, left + newWidth, top + newHeight)
+                )
+            } else {
+                // When disabling square crop, we keep the current rect but allow free movement
+                state.copy(isSquareCrop = isSquare)
+            }
+        }
     }
 
     private fun loadThumbnails(uri: Uri, duration: Long) {
